@@ -48,7 +48,7 @@ services/
 
 ```
 
-4) Open the service_framework folder and Backup the Conscript file:
+4) Open the service_framework folder and Backup the SConscript file:
 
 > $ cd core/service_framework/
 
@@ -56,21 +56,17 @@ services/
 
 5) Replace the SConscript file with the one provided on this repo.
 
-6) Open the "standard_core_library" folder and backup the "lighting_controller_client" folder:
+6) Open the "standard_core_library" and paste there the "alljoyn_muzzley_connector" folder from this repo, containing the AllJoyn-Muzzley connector:
 
 > $ cd core/service_framework/standard_core_library
 
-> $ cp -rf lighting_controller_client lighting_controller_client_backup
+> $ cp alljoyn_muzzley_connector $HOME/alljoyn-muzzley/core/service_framework/standard_core_library
 
-7) Replace the "lighting_controller_client" folder with the one provided on this repo.
-
-8) Replace the "lighting_controller_client" folder with the lighting controller client with the provided one on this repo, containing the AllJoyn-Muzzley connector.
-
-9) Open a command terminal and from under the core/alljoyn/ directory, run the command "scons" to build the core modules for x86_64 target.
+8) Open a command terminal and from under the core/alljoyn/ directory, run the command "scons" to build the core modules for x86_64 target.
 
 > $ scons V=1 OS=linux CPU=x86_64 BINDINGS="cpp" WS=off SERVICES="about,notification,controlpanel,config,onboarding,sample_apps"
 
-10) Open a command terminal and from under the core/service_framework/ directory, run the command "scons" to build the lighting service framework for x86_64 target.
+9) Open a command terminal and from under the core/service_framework/ directory, run the command "scons" to build the lighting service framework for x86_64 target.
 
 > $ scons V=1 OS=linux CPU=x86_64 BINDINGS="cpp" WS=off SERVICES="about,notification,controlpanel,config,onboarding,sample_apps"
 
@@ -114,9 +110,9 @@ services/
 
 > $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/alljoyn-muzzley/core/alljoyn/build/linux/x86_64/debug/dist/services_common/lib/
 
-> $ cd core/service_framework/build/linux/standard_core_library/lighting_controller_client/test
+> $ cd core/service_framework/build/linux/standard_core_library/alljoyn-muzzley-connector/connector
 
-> $ ./lighting_controller_client_sample 
+> $ ./alljoyn_muzzley_connector
 
 
 #Build Instructions for OpenWRT
@@ -224,19 +220,33 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 
 13) Cross-compile Muzzley Library to OpenWRT.
 
+> autoreconf -fi
+
 > ./configure --build=x86_64-unknown-linux-gnu --host=mips-openwrt-linux-uclibc --prefix=$HOME/openwrt-muzzley-lib CXXFAGS="-std=c++0x" --enable-http --enable-logs
 
 > make CC=mips-openwrt-linux-uclibc-gcc LD=mips-openwrt-linux-uclibc-ld
 
 > make install
 
-15) Copy the compiled Muzzley library to the /lib folder on the router.
+
+14) Copy the compiled Muzzley library to the /usr/lib folder on the OpenWRT toolchain folder.
+
+> $ cd $HOME/openwrt-muzzley-lib/lib
+
+> $ scp -r . $OPENWRT_TOOLCHAIN_BASE/usr/lib
+
+> $ cd $HOME/openwrt-muzzley-lib/include
+
+> $ scp -r . $OPENWRT_TOOLCHAIN_BASE/usr/include
+
+
+15) Copy the compiled Muzzley library to the /usr/lib folder on the router.
 
 > $ cd $HOME/openwrt-muzzley-lib/lib
 
 > $ rm libmuzzley.a
 
-> $ scp -r . root@192.168.1.1:/lib
+> $ scp -r . root@192.168.1.1:/usr/lib
 
 
 16) Cross-compile AllJoyn-Muzzley Connector to OpenWRT.
@@ -245,13 +255,11 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 
 17) Replace the AllJoyn library installed on the router (14.06) with the one cross-compiled with the previous command (14.12) .
 
-
 > $ cd $HOME/alljoyn-muzzley/core/alljoyn/build/openwrt/openwrt/debug/dist/cpp/lib
 
 > $ scp liballjoyn.so root@192.168.1.1:/usr/bin
 
 > $ scp liballjoyn_about.so root@192.168.1.1:/usr/bin
-
 
 > $ cd $HOME/alljoyn-muzzley/core/alljoyn/build/openwrt/openwrt/debug/dist/config/lib
 
@@ -284,8 +292,8 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 
 20) Copy the Alljoyn-Muzzley connector to the /bin folder on the router.
 
-> $ cd core/service_framework/build/linux/standard_core_library/lighting_controller_client/test
+> $ cd core/service_framework/build/linux/standard_core_library/alljoyn_muzzley_connector/connector
 
-> $ scp lighting_controller_client_sample root@192.168.1.1:/bin
+> $ scp alljoyn_muzzley_connector root@192.168.1.1:/bin
 
 21) Run it. (For the Lighting Controller Service use the Luminaire App for Android)

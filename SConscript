@@ -24,6 +24,7 @@ env.Append(CPPPATH = '$DISTDIR/services_common/inc');
 env.Append(CPPPATH = '$DISTDIR/notification/inc');
 env.Append(CPPPATH = '$DISTDIR/controlpanel/inc');
 
+
 # Build all the services
 env.SConscript('../../base/config/cpp/SConscript', {'config_env': env})
 env.SConscript('../../base/controlpanel/cpp/SConscript', {'cpsenv': env})
@@ -69,6 +70,21 @@ lighting_controller_client_static_lib = lsf_client_env.StaticLibrary('$LSF_CLIEN
 lighting_controller_client_sample = lsf_client_env.Program('$LSF_CLIENT_DISTDIR/test/lighting_controller_client_sample', ['standard_core_library/lighting_controller_client/test/LightingControllerClientSample.cc'] + lsf_client_env['client_objs'] + lsf_env['common_objs'])
 lsf_client_env.Install('$LSF_CLIENT_DISTDIR/bin', lsf_client_env['client_objs'])
 lsf_client_env.Install('$LSF_CLIENT_DISTDIR/bin', lsf_env['common_objs'])
+
+#Build AllJoyn Muzzley Connector
+alj_muzzley_env = lsf_env.Clone()
+alj_muzzley_env.Append(CPPPATH = [ alj_muzzley_env.Dir('standard_core_library/alljoyn_muzzley_connector/inc') ])
+alj_muzzley_env.Prepend(LIBS = ['alljoyn_notification.a', 'alljoyn_about.a', 'alljoyn_config.a', 'alljoyn_services_common.a', 'alljoyn_config.a', 'alljoyn_controlpanel.a'])
+alj_muzzley_env['ALJ_MUZZLEY_DISTDIR'] = 'build/linux/standard_core_library/alljoyn_muzzley_connector'
+alj_muzzley_env.Install('$ALJ_MUZZLEY_DISTDIR/inc', alj_muzzley_env.Glob('standard_core_library/common/inc/*.h'))
+alj_muzzley_env.Install('$ALJ_MUZZLEY_DISTDIR/inc', alj_muzzley_env.Glob('standard_core_library/alljoyn_muzzley_connector/inc/*.h'))
+alj_muzzley_env['client_srcs'] = alj_muzzley_env.Glob('standard_core_library/alljoyn_muzzley_connector/src/*.cc')
+alj_muzzley_env['client_objs'] = alj_muzzley_env.Object(alj_muzzley_env['client_srcs']) 
+alj_muzzley_static_lib = alj_muzzley_env.StaticLibrary('$ALJ_MUZZLEY_DISTDIR/lib/alljoyn_muzzley_connector', alj_muzzley_env['client_objs'] + lsf_env['common_objs']);
+alj_muzzley_connector = alj_muzzley_env.Program('$ALJ_MUZZLEY_DISTDIR/connector/alljoyn_muzzley_connector', ['standard_core_library/alljoyn_muzzley_connector/connector/alljoyn_muzzley_connector.cc'] + alj_muzzley_env['client_objs'] + lsf_env['common_objs'])
+alj_muzzley_env.Install('$ALJ_MUZZLEY_DISTDIR/bin', alj_muzzley_env['client_objs'])
+alj_muzzley_env.Install('$ALJ_MUZZLEY_DISTDIR/bin', lsf_env['common_objs'])
+
 
 #Build the unit tests
 gtest_dir = os.environ.get('GTEST_DIR', '')
