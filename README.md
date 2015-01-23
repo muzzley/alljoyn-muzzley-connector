@@ -1,6 +1,6 @@
-# README #
+# AllJoyn Muzzley Connector #
 
-This repo contains the code for the Muzzley-Alljoyn connector C++ client library.
+This repo contains the code for the AllJoyn-Muzzley connector C++ client library.
 
 # How do I get set up?
 
@@ -64,7 +64,7 @@ services/
 
 7) Replace the "lighting_controller_client" folder with the one provided on this repo.
 
-8) Replace the "lighting_controller_client" folder with the lighting controller client with the provided one on this repo, containing the alljoyn-muzzley connector.
+8) Replace the "lighting_controller_client" folder with the lighting controller client with the provided one on this repo, containing the AllJoyn-Muzzley connector.
 
 9) Open a command terminal and from under the core/alljoyn/ directory, run the command "scons" to build the core modules for x86_64 target.
 
@@ -81,7 +81,7 @@ services/
 
 ##Run Tests
 
-1) Launch Alljoyn Daemon:
+1) Launch AllJoyn Daemon:
 
 > $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/alljoyn-muzzley/core/alljoyn/build/linux/x86_64/debug/dist/cpp/lib/
 
@@ -194,12 +194,12 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 
 10) Flash it in the router firmware and wait for reboot.
 
-11) SSH to your router with two different shells and execute the following commands on each one to test the Alljoyn framework:
+11) SSH to your router with two different shells and execute the following commands on each one to test the AllJoyn framework:
 > /usr/bin/AboutService
 
 > /usr/bin/AboutClient
 
-12) Prepare the OpenWRT toolchain to be able to cross-compile the Muzzley library and the alljoyn-muzzley connector for the specific router hardware target.
+12) Prepare the OpenWRT toolchain to be able to cross-compile the Muzzley library and the AllJoyn-Muzzley connector for the specific router hardware target.
 
 > export PATH=$PATH:$HOME/openwrt/staging_dir/toolchain-mips_34kc_gcc-4.8-linaro_uClibc-0.9.33.2/bin
 
@@ -239,11 +239,11 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 > $ scp -r . root@192.168.1.1:/lib
 
 
-16) Cross-compile Alljoyn-Muzzley Connector to OpenWRT.
+16) Cross-compile AllJoyn-Muzzley Connector to OpenWRT.
 
 > scons V=1 ICE=off BR=on BT=off WS=off CPU=openwrt OS=openwrt BINDINGS="cpp" SERVICES="about,notification,controlpanel,config,onboarding,sample_apps" TARGET_CFLAGS="-Os -pipe -mips32r2 -mtune=74kc -fPIC -fno-caller-saves -fhonour-copts -Wno-error=unused-but-set-variable -msoft-float" "TARGET_CC=$TARGET-gcc" "TARGET_CXX=$TARGET-g++" "TARGET_AR=$TARGET-ar" "TARGET_RANLIB=$TARGET-ranlib" "TARGET_LINK=$TARGET-gcc" "TARGET_CPPFLAGS=-I$OPENWRT_TARGET_BASE/usr/include -I$OPENWRT_TARGET_BASE/include -I$OPENWRT_TOOLCHAIN_BASE/usr/include -I$OPENWRT_TOOLCHAIN_BASE/include" "TARGET_PATH=$OPENWRT_TOOLCHAIN_BASE/bin:$OPENWRT_BASE/staging_dir/host/bin:$PATH" "STAGING_DIR=$OPENWRT_TARGET_BASE" "TARGET_LINKFLAGS=-L$OPENWRT_TARGET_BASE/usr/lib" "CXXFLAGS=$CXXFLAGS -I$AJ_DIST/cpp/inc -I$AJ_DIST/about/inc -I$AJ_DIST/services_common/inc -I$AJ_DIST/notification/inc -I$AJ_DIST/controlpanel/inc -I$AJ_DIST/services_common/inc" "LDFLAGS=$LDFLAGS -L$AJ_DIST/cpp/lib -L$AJ_DIST/about/lib -L$AJ_DIST/services_common/lib -L$AJ_DIST/notification/lib -L$AJ_DIST/controlpanel/lib"
 
-17) Replace the Alljoyn library installed on the router (14.06) with the one cross-compiled with the previous command (14.12) .
+17) Replace the AllJoyn library installed on the router (14.06) with the one cross-compiled with the previous command (14.12) .
 
 
 > $ cd $HOME/alljoyn-muzzley/core/alljoyn/build/openwrt/openwrt/debug/dist/cpp/lib
@@ -274,7 +274,7 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 > $ scp liballjoyn_services_common.so root@192.168.1.1:/usr/bin
 
 
-18) Replace the Alljoyn Daemon installed on the router (14.06) with the one cross-compiled with the previous command (14.12).
+18) Replace the AllJoyn Daemon installed on the router (14.06) with the one cross-compiled with the previous command (14.12).
 
 > $ cd $HOME/alljoyn-muzzley/core/alljoyn/build/openwrt/openwrt/debug/dist/cpp/bin
 
