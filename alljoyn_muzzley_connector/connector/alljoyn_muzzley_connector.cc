@@ -98,21 +98,21 @@
 //#define MUZZLEY_STAGING
 
 #if defined(MUZZLEY_STAGING)
-	#define MUZZLEY_PLUGS_APP_TOKEN "cd2b5e70beca9e9f"
-	#define MUZZLEY_PLUGS_PROFILEID "54a3e58e93ffd78eeea86fcb"
-	#define MUZZLEY_LIGHTING_APP_TOKEN "bc3f07fae0ff182c"
-	#define MUZZLEY_LIGHTING_PROFILEID "546f5f2d006233c726739de3"
-	#define MUZZLEY_ENDPOINTHOST "platform.office.muzzley.com"
-	#define MUZZLEY_API_ENDPOINTHOST "channel-api.office.muzzley.com"
-	#define MUZZLEY_MANAGER_ENDPOINTHOST "global-manager.office.muzzley.com"
+    #define MUZZLEY_PLUGS_APP_TOKEN "cd2b5e70beca9e9f"
+    #define MUZZLEY_PLUGS_PROFILEID "54a3e58e93ffd78eeea86fcb"
+    #define MUZZLEY_LIGHTING_APP_TOKEN "bc3f07fae0ff182c"
+    #define MUZZLEY_LIGHTING_PROFILEID "546f5f2d006233c726739de3"
+    #define MUZZLEY_ENDPOINTHOST "platform.office.muzzley.com"
+    #define MUZZLEY_API_ENDPOINTHOST "channel-api.office.muzzley.com"
+    #define MUZZLEY_MANAGER_ENDPOINTHOST "global-manager.office.muzzley.com"
 #else
-	#define MUZZLEY_PLUGS_APP_TOKEN "b640b74e19f831a3"
-	#define MUZZLEY_PLUGS_PROFILEID "54aaee6cec3302c4272076a2"
-	#define MUZZLEY_LIGHTING_APP_TOKEN "5f09fd4b3b6f8821"
-	#define MUZZLEY_LIGHTING_PROFILEID "5486e2e3ec3302c42720738b"
-	#define MUZZLEY_ENDPOINTHOST "geoplatform.muzzley.com"
-	#define MUZZLEY_API_ENDPOINTHOST "channels.muzzley.com"
-	#define MUZZLEY_MANAGER_ENDPOINTHOST "global-manager.muzzley.com"
+    #define MUZZLEY_PLUGS_APP_TOKEN "b640b74e19f831a3"
+    #define MUZZLEY_PLUGS_PROFILEID "54aaee6cec3302c4272076a2"
+    #define MUZZLEY_LIGHTING_APP_TOKEN "5f09fd4b3b6f8821"
+    #define MUZZLEY_LIGHTING_PROFILEID "5486e2e3ec3302c42720738b"
+    #define MUZZLEY_ENDPOINTHOST "geoplatform.muzzley.com"
+    #define MUZZLEY_API_ENDPOINTHOST "channels.muzzley.com"
+    #define MUZZLEY_MANAGER_ENDPOINTHOST "global-manager.muzzley.com"
 #endif
 
 #define MUZZLEY_MANAGER_REGISTER_URL "/deviceapp/register"
@@ -230,35 +230,35 @@ double color_remap_double(double x, double in_min, double in_max, double out_min
 
 //Semaphore methods
 void semaphore_lock(int& semaphore) {
-	// Tests for '0' on the semaphore and increments '1' when '0' is observed
-	struct sembuf lock[2] = { { (short unsigned int) 0, 0 }, { (short unsigned int) 0, 1 } };
-	semop(semaphore, lock, 2);	
+    // Tests for '0' on the semaphore and increments '1' when '0' is observed
+    struct sembuf lock[2] = { { (short unsigned int) 0, 0 }, { (short unsigned int) 0, 1 } };
+    semop(semaphore, lock, 2);    
 }
 
 void semaphore_unlock(int& semaphore) {
-	// Decrements '1' on the semaphore, unblocking threads waiting for '0'
-	struct sembuf unlock[1] = { { (short unsigned int) 0, -1 } };
-	semop(semaphore, unlock, 1);	
+    // Decrements '1' on the semaphore, unblocking threads waiting for '0'
+    struct sembuf unlock[1] = { { (short unsigned int) 0, -1 } };
+    semop(semaphore, unlock, 1);    
 }
 
 int semaphore_start(){
-	key_t key = ftok(MUZZLEY_SEMAPHORE_FILENAME, 1);
-	int semaphore = semget(key, 1, IPC_CREAT | 0777);
-	if (semaphore == -1)
-		cout << "Error on semaphore" << endl << flush;
-	return semaphore;
+    key_t key = ftok(MUZZLEY_SEMAPHORE_FILENAME, 1);
+    int semaphore = semget(key, 1, IPC_CREAT | 0777);
+    if (semaphore == -1)
+        cout << "Error on semaphore" << endl << flush;
+    return semaphore;
 }
 
 void semaphore_stop(int sig) {
-	//Destroy the Semaphore
-	key_t key = ftok(MUZZLEY_SEMAPHORE_FILENAME, 1); // connects to the same semaphore
-	int semaphore = semget(key, 1, IPC_CREAT | 0777);
-	semctl(semaphore, 0, IPC_RMID);
-	cout << "Exiting publish semaphore..." << endl << flush;
-	
-	string s = MUZZLEY_SEMAPHORE_FILENAME;
-	unlink (s.c_str());
-	exit(0);
+    //Destroy the Semaphore
+    key_t key = ftok(MUZZLEY_SEMAPHORE_FILENAME, 1); // connects to the same semaphore
+    int semaphore = semget(key, 1, IPC_CREAT | 0777);
+    semctl(semaphore, 0, IPC_RMID);
+    cout << "Exiting publish semaphore..." << endl << flush;
+    
+    string s = MUZZLEY_SEMAPHORE_FILENAME;
+    unlink (s.c_str());
+    exit(0);
 }
 
 bool muzzley_check_semaphore_file_exists(string filename){
@@ -283,7 +283,7 @@ string muzzley_read_lighting_deviceKey_file(){
     myfile.open (MUZZLEY_LIGHTING_DEVICEKEY_FILENAME);
     getline(myfile, line);
     myfile.close();
-    return line;	
+    return line;    
 }
 
 void muzzley_write_lighting_deviceKey_file(string deviceKey){
@@ -299,7 +299,7 @@ string muzzley_read_plugs_deviceKey_file(){
     myfile.open (MUZZLEY_PLUGS_DEVICEKEY_FILENAME);
     getline(myfile, line);
     myfile.close();
-    return line;	
+    return line;    
 }
 
 void muzzley_write_plugs_deviceKey_file(string deviceKey){
@@ -311,14 +311,14 @@ void muzzley_write_plugs_deviceKey_file(string deviceKey){
 
 void RGBtoHSV( double r, double g, double b, double *h, double *s, double *v )
 {
-	/*
-	Color Convertion
-	using namespace std;
-	r,g,b values are from 0 to 1
-	h = [0,360], s = [0,1], v = [0,1]
-	if (s == 0), then h = -1 (undefined)
-	*/
-	
+    /*
+    Color Convertion
+    using namespace std;
+    r,g,b values are from 0 to 1
+    h = [0,360], s = [0,1], v = [0,1]
+    if (s == 0), then h = -1 (undefined)
+    */
+    
     double min, max, delta;
     min = std::min(r, g);
     min = std::min(min,b);
@@ -389,240 +389,240 @@ void HSVtoRGB( double *r, double *g, double *b, double h, double s, double v )
 
 
 void print_plug_vector(){
-	try{
-		for (unsigned int i = 0; i < plug_vec.size(); i++){
-			cout << endl << "Plug Vector Pos#: " << i << " of# : " << req_vec.size() << endl << flush;
-			cout << "Component: " << get<0>(plug_vec[i]) << endl << flush;
-			cout << "Label: " << get<1>(plug_vec[i]) << endl << endl << flush;
-		}
-	}catch(exception& e){
+    try{
+        for (unsigned int i = 0; i < plug_vec.size(); i++){
+            cout << endl << "Plug Vector Pos#: " << i << " of# : " << req_vec.size() << endl << flush;
+            cout << "Component: " << get<0>(plug_vec[i]) << endl << flush;
+            cout << "Label: " << get<1>(plug_vec[i]) << endl << endl << flush;
+        }
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
     }
 }
 
 int get_plug_vector_pos(string component){
-	try{
-		for (unsigned int i = 0; i < plug_vec.size(); i++){
-			if(get<0>(plug_vec[i])==component){
-				cout << "Plug found on pos#: " << i << endl << flush; 
-				return i;
-			}
-		}
-		cout << "Plug not found" << endl << flush; 
-		return -1;
-	}catch(exception& e){
+    try{
+        for (unsigned int i = 0; i < plug_vec.size(); i++){
+            if(get<0>(plug_vec[i])==component){
+                cout << "Plug found on pos#: " << i << endl << flush; 
+                return i;
+            }
+        }
+        cout << "Plug not found" << endl << flush; 
+        return -1;
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return -1;
     }
 }
 
 bool add_plug_vector_pos(string device_id_str, string device_name_str, Property* plug_property_status, Property* plug_property_volt, Property* plug_property_curr, Property* plug_property_freq, Property* plug_property_watt, Property* plug_property_accu, Action* plug_action_get_properties, Action* plug_action_on, Action* plug_action_off){
-	try{
-		time_t now = std::time(0);
-		plug_vec.push_back(make_tuple(device_id_str, device_name_str, plug_property_status, plug_property_volt, plug_property_curr, plug_property_freq, plug_property_watt , plug_property_accu, plug_action_get_properties, plug_action_on, plug_action_off, now));
-		cout << "Stored new plug info sucessfully" << endl << flush; 
-		return true;
-	}catch(exception& e){
+    try{
+        time_t now = std::time(0);
+        plug_vec.push_back(make_tuple(device_id_str, device_name_str, plug_property_status, plug_property_volt, plug_property_curr, plug_property_freq, plug_property_watt , plug_property_accu, plug_action_get_properties, plug_action_on, plug_action_off, now));
+        cout << "Stored new plug info sucessfully" << endl << flush; 
+        return true;
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
     }
 }
 
 bool del_plug_vector_pos(string component){
-	try{
-		for (unsigned int i = 0; i < plug_vec.size(); i++){
-			if(get<0>(plug_vec[i])==component){
-				plug_vec.erase(plug_vec.begin()+i);
-				cout << "Deleted plug on pos#: " << i << endl << flush; 
-				return true;
-			}
-		}
-		cout << "Plug not found" << endl << flush; 
-		return false;
-	}catch(exception& e){
+    try{
+        for (unsigned int i = 0; i < plug_vec.size(); i++){
+            if(get<0>(plug_vec[i])==component){
+                plug_vec.erase(plug_vec.begin()+i);
+                cout << "Deleted plug on pos#: " << i << endl << flush; 
+                return true;
+            }
+        }
+        cout << "Plug not found" << endl << flush; 
+        return false;
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
     }
 }
 
 string get_plug_vector_componentID(int i){
-	try{		
-		return get<0>(plug_vec[i]);
-	}catch(exception& e){
+    try{        
+        return get<0>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return "";
     }
 }
 
 string get_plug_vector_label(int i){
-	try{		
-		cout << "Component: " << get<0>(plug_vec[i]) << endl << flush;
-		cout << "Label: " << get<1>(plug_vec[i]) << endl << flush;
-		return get<1>(plug_vec[i]);
-	}catch(exception& e){
+    try{        
+        cout << "Component: " << get<0>(plug_vec[i]) << endl << flush;
+        cout << "Label: " << get<1>(plug_vec[i]) << endl << flush;
+        return get<1>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return "";
     }
 }
 
 Property* get_plug_vector_property_status(int i){
-	try{		
-		return get<2>(plug_vec[i]);
-	}catch(exception& e){
+    try{        
+        return get<2>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return NULL;
     }
 }
 
 Property* get_plug_vector_property_voltage(int i){
-	try{		
-		return get<3>(plug_vec[i]);
-	}catch(exception& e){
+    try{        
+        return get<3>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return NULL;
     }
 }
 
 Property* get_plug_vector_property_current(int i){
-	try{		
-		return get<4>(plug_vec[i]);
-	}catch(exception& e){
+    try{        
+        return get<4>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return NULL;
     }
 }
 
 Property* get_plug_vector_property_frequency(int i){
-	try{
-		return get<5>(plug_vec[i]);
-	}catch(exception& e){
+    try{
+        return get<5>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return NULL;
     }
 }
 
 Property* get_plug_vector_property_power(int i){
-	try{
-		return get<6>(plug_vec[i]);
-	}catch(exception& e){
+    try{
+        return get<6>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return NULL;
     }
 }
 
 Property* get_plug_vector_property_energy(int i){
-	try{		
-		return get<7>(plug_vec[i]);
-	}catch(exception& e){
+    try{        
+        return get<7>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return NULL;
     }
 }
 
 Action* get_plug_vector_action_getproperties(int i){
-	try{		
-		return get<8>(plug_vec[i]);
-	}catch(exception& e){
+    try{        
+        return get<8>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return NULL;
     }
 }
 
 Action* get_plug_vector_action_set_on(int i){
-	try{		
-		return get<9>(plug_vec[i]);
-	}catch(exception& e){
+    try{        
+        return get<9>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return NULL;
     }
 }
 
 Action* get_plug_vector_action_set_off(int i){
-	try{		
-		return get<10>(plug_vec[i]);
-	}catch(exception& e){
+    try{        
+        return get<10>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return NULL;
     }
 }
 
 time_t get_plug_vector_time(int i){
-	try{		
-		return get<11>(plug_vec[i]);
-	}catch(exception& e){
+    try{        
+        return get<11>(plug_vec[i]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return 0;
     }
 }
 
 void print_request_vector(){
-	for (unsigned int i = 0; i < req_vec.size(); i++){
-		cout << endl << "Vector Pos#: " << i << " of# : " << req_vec.size() << endl << flush;
-		cout << "Component: " << get<0>(req_vec[i]) << endl << flush;
-		cout << "Property: " << get<1>(req_vec[i]) << endl << flush;
-		cout << "CID: " << get<2>(req_vec[i]) << endl << flush;
-		cout << "T: " << get<3>(req_vec[i]) << endl << flush;
-		cout << "Time: " << get<4>(req_vec[i]) << endl << flush;
-		cout << "Type: " << get<5>(req_vec[i]) << endl << endl << flush;
-	}
+    for (unsigned int i = 0; i < req_vec.size(); i++){
+        cout << endl << "Vector Pos#: " << i << " of# : " << req_vec.size() << endl << flush;
+        cout << "Component: " << get<0>(req_vec[i]) << endl << flush;
+        cout << "Property: " << get<1>(req_vec[i]) << endl << flush;
+        cout << "CID: " << get<2>(req_vec[i]) << endl << flush;
+        cout << "T: " << get<3>(req_vec[i]) << endl << flush;
+        cout << "Time: " << get<4>(req_vec[i]) << endl << flush;
+        cout << "Type: " << get<5>(req_vec[i]) << endl << endl << flush;
+    }
 }
 
 int get_request_vector_pos(string component, string property){
-	try{
-		for (unsigned int i = 0; i < req_vec.size(); i++){
-			if(get<0>(req_vec[i])==component){
-				if(get<1>(req_vec[i])==property){
-					cout << "Muzzley request found on pos: " << i << endl << flush; 
-					return i;
-				}
-			}
-		}
-		cout << "Muzzley request not found" << endl << flush; 
-		return -1;
-	}catch(exception& e){
+    try{
+        for (unsigned int i = 0; i < req_vec.size(); i++){
+            if(get<0>(req_vec[i])==component){
+                if(get<1>(req_vec[i])==property){
+                    cout << "Muzzley request found on pos: " << i << endl << flush; 
+                    return i;
+                }
+            }
+        }
+        cout << "Muzzley request not found" << endl << flush; 
+        return -1;
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return -1;
     }
 }
 
 string get_request_vector_CID(int pos){
-	try{
-		return get<2>(req_vec[pos]);
-	}catch(exception& e){
+    try{
+        return get<2>(req_vec[pos]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return "";
-    }	
+    }    
 }
 
 int get_request_vector_t(int pos){
-	try{
-		return get<3>(req_vec[pos]);
-	}catch(exception& e){
+    try{
+        return get<3>(req_vec[pos]);
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return -1;
-    }	
+    }    
 }
 
 bool delete_request_vector_pos(int pos){
-	try{
-		req_vec.erase(req_vec.begin()+pos);
-		return true;
-	}catch(exception& e){
+    try{
+        req_vec.erase(req_vec.begin()+pos);
+        return true;
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
-    }	
+    }    
 }
 
 bool muzzley_clean_request_vector(){
-	for (unsigned int i = 0; i < req_vec.size(); i++){
-		double req_duration = difftime(time(0), get<4>(req_vec[i]));
-		cout << "Muzzley read request#: " << i << " duration: " << req_duration << endl << endl << flush;
-		if(req_duration>MUZZLEY_READ_REQUEST_TIMEOUT){
-	        req_vec.erase(req_vec.begin()+i);
-	        cout << "Erased muzzley read request#: " << i << " (timeout!)" << endl << flush;
-		}
-	}
-	return true;
+    for (unsigned int i = 0; i < req_vec.size(); i++){
+        double req_duration = difftime(time(0), get<4>(req_vec[i]));
+        cout << "Muzzley read request#: " << i << " duration: " << req_duration << endl << endl << flush;
+        if(req_duration>MUZZLEY_READ_REQUEST_TIMEOUT){
+            req_vec.erase(req_vec.begin()+i);
+            cout << "Erased muzzley read request#: " << i << " (timeout!)" << endl << flush;
+        }
+    }
+    return true;
 }
 
 bool muzzley_query_unknown_lampnames(LampManager* lampManager){
@@ -630,13 +630,13 @@ bool muzzley_query_unknown_lampnames(LampManager* lampManager){
     for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
         for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
             if(local_it->second ==  MUZZLEY_UNKNOWN_NAME){
-            	cout << endl << "Quering unknown lamp name for id: " << local_it->first << endl << flush;
-            	status = lampManager->GetLampName(local_it->first);
-            	if (status == LSF_ERR_FAILURE){
-                	return false;
-              	}
-         	}
-      	}
+                cout << endl << "Quering unknown lamp name for id: " << local_it->first << endl << flush;
+                status = lampManager->GetLampName(local_it->first);
+                if (status == LSF_ERR_FAILURE){
+                    return false;
+                  }
+             }
+          }
     }
     return true;
 }
@@ -645,9 +645,9 @@ bool muzzley_lamplist_update_lampname(string lampID, string lampName){
     for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
         for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
             if(local_it->first ==  lampID){
-				cout << endl << "Updating lamp name for id: " << local_it->first << endl << flush;
-				local_it->second=lampName;
-				return true;
+                cout << endl << "Updating lamp name for id: " << local_it->first << endl << flush;
+                local_it->second=lampName;
+                return true;
             }
         }
     }
@@ -658,13 +658,13 @@ string muzzley_lamplist_get_lampname(string lampID){
     for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
         for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
             if(local_it->first == lampID){
-				cout << endl << "Found lamp id: " << local_it->first << endl << flush;
-				if(local_it->second != MUZZLEY_UNKNOWN_NAME && local_it->second != ""){
-					cout << endl << "lampname: " << local_it->second << endl << flush;
-					return local_it->second;
-				}
-				else
-					return MUZZLEY_UNKNOWN_NAME;
+                cout << endl << "Found lamp id: " << local_it->first << endl << flush;
+                if(local_it->second != MUZZLEY_UNKNOWN_NAME && local_it->second != ""){
+                    cout << endl << "lampname: " << local_it->second << endl << flush;
+                    return local_it->second;
+                }
+                else
+                    return MUZZLEY_UNKNOWN_NAME;
             }
         }
     }
@@ -734,11 +734,11 @@ void gupnp_generate_lighting_XML(){
         responseStream << "</root>\n";
 
         ofstream myfile;
-	    myfile.open (MUZZLEY_LIGHTING_XML_FILENAME);
-	    const std::string tmp = responseStream.str();
-		const char* str_xml = tmp.c_str();    
-	    myfile << str_xml;
-	    myfile.close();
+        myfile.open (MUZZLEY_LIGHTING_XML_FILENAME);
+        const std::string tmp = responseStream.str();
+        const char* str_xml = tmp.c_str();    
+        myfile << str_xml;
+        myfile.close();
     }
 
 bool muzzley_lighting_connect_API(){
@@ -786,7 +786,7 @@ bool muzzley_lighting_connect_API(){
 
 bool muzzley_lighting_connect_manager(){
 
-	// Instantiate an HTTP(s) socket stream
+    // Instantiate an HTTP(s) socket stream
     muzzley::socketstream _socket;
     _socket.open(MUZZLEY_MANAGER_ENDPOINTHOST, 80);
 
@@ -833,13 +833,13 @@ bool muzzley_lighting_connect_manager(){
     _socket >> _rep;
     
     if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
-	    // Print the value of a message header
-	    muzzley::JSONObj _key = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
-	    cout << endl << "Parsed Global Manager Reply:" << endl << "Lighting deviceKey: " << (string)_key["deviceKey"] << endl << endl << flush;
-	    
-	    //Store deviceKey in a file
-		muzzley_lighting_deviceKey = (string)_key["deviceKey"];
-		muzzley_write_lighting_deviceKey_file(muzzley_lighting_deviceKey);
+        // Print the value of a message header
+        muzzley::JSONObj _key = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
+        cout << endl << "Parsed Global Manager Reply:" << endl << "Lighting deviceKey: " << (string)_key["deviceKey"] << endl << endl << flush;
+        
+        //Store deviceKey in a file
+        muzzley_lighting_deviceKey = (string)_key["deviceKey"];
+        muzzley_write_lighting_deviceKey_file(muzzley_lighting_deviceKey);
     }
     else{
         cout << "Error: " << _rep->status() << endl << flush;
@@ -854,8 +854,8 @@ bool muzzley_lighting_connect_manager(){
 
 bool muzzley_replace_lighting_components(){
 
-	//Generate XML File
-	gupnp_generate_lighting_XML();
+    //Generate XML File
+    gupnp_generate_lighting_XML();
 
     if(muzzley_lighting_registered==false){
         return false;
@@ -930,8 +930,8 @@ bool muzzley_replace_lighting_components(){
 
 bool muzzley_add_lighting_component(LSFString lampID, LSFString lampName){
 
-	//Generate XML File
-	gupnp_generate_lighting_XML();
+    //Generate XML File
+    gupnp_generate_lighting_XML();
 
     if(muzzley_lighting_registered==false){
         return false;
@@ -993,8 +993,8 @@ bool muzzley_add_lighting_component(LSFString lampID, LSFString lampName){
 
 bool muzzley_add_lighting_components(LSFStringList new_lampIDs){
 
-	//Generate XML File
-	gupnp_generate_lighting_XML();
+    //Generate XML File
+    gupnp_generate_lighting_XML();
 
     if(muzzley_lighting_registered==false){
         return false;
@@ -1058,8 +1058,8 @@ bool muzzley_add_lighting_components(LSFStringList new_lampIDs){
 
 bool muzzley_remove_lighting_components(LSFStringList del_lampIDs){
 
-	//Generate XML File
-	gupnp_generate_lighting_XML();
+    //Generate XML File
+    gupnp_generate_lighting_XML();
 
     if(muzzley_lighting_registered==false){
         return false;
@@ -1142,18 +1142,18 @@ void gupnp_generate_plugs_XML(){
     responseStream << "<macAddress>" << muzzley_macAddress << "</macAddress>\n";
     responseStream << "<deviceKey>" << muzzley_plugs_deviceKey << "</deviceKey>\n";
     responseStream << "<components>\n";
-	try{
-		for (unsigned int i = 0; i < plug_vec.size(); i++){
-			if(get<0>(plug_vec[i])!=""){
-				responseStream << "<component>\n";
-			    responseStream << "<id>" << get<0>(plug_vec[i]) << "</id>\n";
-			    responseStream << "<label>" << get<1>(plug_vec[i]) << "</label>\n";
-			    responseStream << "<type>" << DEVICE_PLUG << "</type>\n";
-			    responseStream << "</component>\n";
-			}
-		}
-		
-	}catch(exception& e){
+    try{
+        for (unsigned int i = 0; i < plug_vec.size(); i++){
+            if(get<0>(plug_vec[i])!=""){
+                responseStream << "<component>\n";
+                responseStream << "<id>" << get<0>(plug_vec[i]) << "</id>\n";
+                responseStream << "<label>" << get<1>(plug_vec[i]) << "</label>\n";
+                responseStream << "<type>" << DEVICE_PLUG << "</type>\n";
+                responseStream << "</component>\n";
+            }
+        }
+        
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
     }
     responseStream << "</components>\n";
@@ -1163,7 +1163,7 @@ void gupnp_generate_plugs_XML(){
     ofstream myfile;
     myfile.open (MUZZLEY_PLUGS_XML_FILENAME);
     const std::string tmp = responseStream.str();
-	const char* str_xml = tmp.c_str();    
+    const char* str_xml = tmp.c_str();    
     myfile << str_xml;
     myfile.close();
 }
@@ -1213,7 +1213,7 @@ bool muzzley_plugs_connect_API(){
 
 bool muzzley_plugs_connect_manager(){
 
-	// Instantiate an HTTP(s) socket stream
+    // Instantiate an HTTP(s) socket stream
     muzzley::socketstream _socket;
     _socket.open(MUZZLEY_MANAGER_ENDPOINTHOST, 80);
 
@@ -1260,13 +1260,13 @@ bool muzzley_plugs_connect_manager(){
     _socket >> _rep;
     
     if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
-	    // Print the value of a message header
-	    muzzley::JSONObj _key = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
-	    cout << endl << "Parsed Global Manager Reply:" << endl << "Plugs deviceKey: " << (string)_key["deviceKey"] << endl << endl << flush;
-	    
-	    //Store deviceKey in a file
-		muzzley_plugs_deviceKey = (string)_key["deviceKey"];
-		muzzley_write_plugs_deviceKey_file(muzzley_plugs_deviceKey);
+        // Print the value of a message header
+        muzzley::JSONObj _key = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
+        cout << endl << "Parsed Global Manager Reply:" << endl << "Plugs deviceKey: " << (string)_key["deviceKey"] << endl << endl << flush;
+        
+        //Store deviceKey in a file
+        muzzley_plugs_deviceKey = (string)_key["deviceKey"];
+        muzzley_write_plugs_deviceKey_file(muzzley_plugs_deviceKey);
     }
     else{
         cout << "Error: " << _rep->status() << endl << flush;
@@ -1281,8 +1281,8 @@ bool muzzley_plugs_connect_manager(){
 
 bool muzzley_replace_plugs_components(){
 
-	//Generate XML File
-	gupnp_generate_plugs_XML();
+    //Generate XML File
+    gupnp_generate_plugs_XML();
 
     if(muzzley_plugs_registered==false){
         return false;
@@ -1298,13 +1298,13 @@ bool muzzley_replace_plugs_components(){
     muzzley::JSONArr _components;
     
     for (unsigned int i = 0; i < plug_vec.size(); i++){
-		muzzley::JSONObj _bulb = JSON(
+        muzzley::JSONObj _bulb = JSON(
             "id" <<  get<0>(plug_vec[i]) <<
             "label" << get<1>(plug_vec[i]) <<
             "type" << DEVICE_PLUG
         );
         _components << _bulb;
-	}
+    }
 
     // Instantiate a string with some body part
     muzzley::JSONObj _replace_components;
@@ -1344,8 +1344,8 @@ bool muzzley_replace_plugs_components(){
 }
 bool muzzley_add_plugs_component(string plug_id, string plug_name){
 
-	//Generate XML File
-	gupnp_generate_plugs_XML();
+    //Generate XML File
+    gupnp_generate_plugs_XML();
 
     if(muzzley_plugs_registered==false){
         return false;
@@ -1405,8 +1405,8 @@ bool muzzley_add_plugs_component(string plug_id, string plug_name){
 
 bool muzzley_add_plugs_components(string plug_id, string plug_name){
 
-	//Generate XML File
-	gupnp_generate_plugs_XML();
+    //Generate XML File
+    gupnp_generate_plugs_XML();
 
     if(muzzley_plugs_registered==false){
         return false;
@@ -1466,8 +1466,8 @@ bool muzzley_add_plugs_components(string plug_id, string plug_name){
 
 bool muzzley_remove_plugs_component(string plug_id, string plug_name){
 
-	//Generate XML File
-	gupnp_generate_plugs_XML();
+    //Generate XML File
+    gupnp_generate_plugs_XML();
 
     if(muzzley_lighting_registered==false){
         return false;
@@ -1529,8 +1529,8 @@ bool muzzley_remove_plugs_component(string plug_id, string plug_name){
 
 bool muzzley_publish_lampState(LSFString lampID, bool onoff, muzzley::Client* _muzzley_lighting_client){
     try{
-    	
-    	int semaphore = semaphore_start();
+        
+        int semaphore = semaphore_start();
 
         muzzley::Subscription _s1;
         _s1.setNamespace(MUZZLEY_WORKSPACE);
@@ -1543,30 +1543,30 @@ bool muzzley_publish_lampState(LSFString lampID, bool onoff, muzzley::Client* _m
         int pos = get_request_vector_pos(lampID, PROPERTY_STATUS);
         
         if(pos!=-1){
-        	_m1.setStatus(true);
-			_m1.setCorrelationID(get_request_vector_CID(pos));
-			_m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-			_m1.setData(JSON(
-	           "value" <<  onoff <<
-	           "profile" << MUZZLEY_LIGHTING_PROFILEID <<
-	           "channel" << muzzley_lighting_deviceKey <<
-	           "component" << lampID <<
-	           "property" << PROPERTY_STATUS <<
-	           "data" << JSON(
-	               "value" <<  onoff
-	               )
-	        ));
+            _m1.setStatus(true);
+            _m1.setCorrelationID(get_request_vector_CID(pos));
+            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
+            _m1.setData(JSON(
+               "value" <<  onoff <<
+               "profile" << MUZZLEY_LIGHTING_PROFILEID <<
+               "channel" << muzzley_lighting_deviceKey <<
+               "component" << lampID <<
+               "property" << PROPERTY_STATUS <<
+               "data" << JSON(
+                   "value" <<  onoff
+                   )
+            ));
 
-			//cout << _s1 << endl << flush;
-	        //cout << _m1 << endl << flush;
-	        semaphore_lock(semaphore);
-	        _muzzley_lighting_client->reply(_m1, _m1);
-	        semaphore_unlock(semaphore);
-	        delete_request_vector_pos(pos);
-	        cout << "Replyed bulb status!" << endl << flush;
-	        return true;
+            //cout << _s1 << endl << flush;
+            //cout << _m1 << endl << flush;
+            semaphore_lock(semaphore);
+            _muzzley_lighting_client->reply(_m1, _m1);
+            semaphore_unlock(semaphore);
+            delete_request_vector_pos(pos);
+            cout << "Replyed bulb status!" << endl << flush;
+            return true;
         }
-			
+            
         _m1.setData(JSON(
             "io" << "i" <<
             "data" << JSON(
@@ -1590,7 +1590,7 @@ bool muzzley_publish_lampState(LSFString lampID, bool onoff, muzzley::Client* _m
 bool muzzley_publish_brightness(LSFString lampID, double brightness, muzzley::Client* _muzzley_lighting_client){
     try{
 
-    	int semaphore = semaphore_start();
+        int semaphore = semaphore_start();
 
         muzzley::Subscription _s1;
         _s1.setNamespace(MUZZLEY_WORKSPACE);
@@ -1603,30 +1603,30 @@ bool muzzley_publish_brightness(LSFString lampID, double brightness, muzzley::Cl
 
         int pos = get_request_vector_pos(lampID, PROPERTY_BRIGHTNESS);
         if(pos!=-1){
-        	_m1.setStatus(true);
-			_m1.setCorrelationID(get_request_vector_CID(pos));
-			_m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-			_m1.setData(JSON(
-	            "value" <<  brightness <<
-	            "profile" << MUZZLEY_LIGHTING_PROFILEID <<
-	            "channel" << muzzley_lighting_deviceKey <<
-	            "component" << lampID <<
-	            "property" << PROPERTY_BRIGHTNESS <<
-	            "data" << JSON(
-	                "value" <<  brightness
-	                )
-	        ));
+            _m1.setStatus(true);
+            _m1.setCorrelationID(get_request_vector_CID(pos));
+            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
+            _m1.setData(JSON(
+                "value" <<  brightness <<
+                "profile" << MUZZLEY_LIGHTING_PROFILEID <<
+                "channel" << muzzley_lighting_deviceKey <<
+                "component" << lampID <<
+                "property" << PROPERTY_BRIGHTNESS <<
+                "data" << JSON(
+                    "value" <<  brightness
+                    )
+            ));
 
-			//cout << _s1 << endl << flush;
-	        //cout << _m1 << endl << flush;
-	        semaphore_lock(semaphore);
-	        _muzzley_lighting_client->reply(_m1, _m1);
-	        semaphore_unlock(semaphore);
-	        delete_request_vector_pos(pos);
-	        cout << "Replyed bulb brightness!" << endl << flush;
-	        return true;
+            //cout << _s1 << endl << flush;
+            //cout << _m1 << endl << flush;
+            semaphore_lock(semaphore);
+            _muzzley_lighting_client->reply(_m1, _m1);
+            semaphore_unlock(semaphore);
+            delete_request_vector_pos(pos);
+            cout << "Replyed bulb brightness!" << endl << flush;
+            return true;
         }
- 		
+         
        _m1.setData(JSON(
             "io" << "i" <<
             "data" << JSON(
@@ -1651,7 +1651,7 @@ bool muzzley_publish_brightness(LSFString lampID, double brightness, muzzley::Cl
 bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blue, muzzley::Client* _muzzley_lighting_client){
     try{
 
-    	int semaphore = semaphore_start();
+        int semaphore = semaphore_start();
 
         muzzley::Subscription _s1;
         _s1.setNamespace(MUZZLEY_WORKSPACE);
@@ -1665,46 +1665,46 @@ bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blu
 
         int pos = get_request_vector_pos(lampID, PROPERTY_COLOR);
         if(pos!=-1){
-			_m1.setStatus(true);
-			_m1.setCorrelationID(get_request_vector_CID(pos));
-			_m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-			_m1.setData(JSON(
-	            "value" << JSON(
-	                "r" << red <<
-	                "g" << green <<
-	                "b" << blue
-	          	    ) <<
-	          	"profile" << MUZZLEY_LIGHTING_PROFILEID <<
-	            "channel" << muzzley_lighting_deviceKey <<
-	            "component" << lampID <<
-	            "property" << PROPERTY_COLOR <<
-	            "data" << JSON(
-	                "value" <<  JSON(
-	                    "r" << red <<
-	                    "g" << green <<
-	                    "b" << blue
-	          	        )
-	                ) 
-	        ));
+            _m1.setStatus(true);
+            _m1.setCorrelationID(get_request_vector_CID(pos));
+            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
+            _m1.setData(JSON(
+                "value" << JSON(
+                    "r" << red <<
+                    "g" << green <<
+                    "b" << blue
+                      ) <<
+                  "profile" << MUZZLEY_LIGHTING_PROFILEID <<
+                "channel" << muzzley_lighting_deviceKey <<
+                "component" << lampID <<
+                "property" << PROPERTY_COLOR <<
+                "data" << JSON(
+                    "value" <<  JSON(
+                        "r" << red <<
+                        "g" << green <<
+                        "b" << blue
+                          )
+                    ) 
+            ));
 
-			//cout << _s1 << endl << flush;
-	        //cout << _m1 << endl << flush;
-	        semaphore_lock(semaphore);
-	        _muzzley_lighting_client->reply(_m1, _m1);
-	        semaphore_unlock(semaphore);
-	        delete_request_vector_pos(pos);
-	        cout << "Replyed bulb color!" << endl << flush;
-	        return true;
-		}
+            //cout << _s1 << endl << flush;
+            //cout << _m1 << endl << flush;
+            semaphore_lock(semaphore);
+            _muzzley_lighting_client->reply(_m1, _m1);
+            semaphore_unlock(semaphore);
+            delete_request_vector_pos(pos);
+            cout << "Replyed bulb color!" << endl << flush;
+            return true;
+        }
       
         _m1.setData(JSON(
             "io" << "i" <<
             "data" << JSON(
-            	"value" << JSON(
+                "value" << JSON(
                 "r" << red <<
                 "g" << green <<
                 "b" << blue
-            	)	
+                )    
             )
         ));
 
@@ -1722,55 +1722,55 @@ bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blu
 
 bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Client* _muzzley_lighting_client){
 
-	try{
+    try{
         std::string line, onoff, hue, saturation, brightness, colortemp;
         std::string input = lampState.c_str();
-	    std::string delimiter = "=";
-	    std::stringstream ss(input);
+        std::string delimiter = "=";
+        std::stringstream ss(input);
 
-	    while(std::getline(ss, line))
-	    {
-	        std::string key = line.substr(0, line.find(delimiter));
-	        std::string value = line.substr(line.find(delimiter)+1);
-	        if(key == "OnOff") {
-	            onoff = value;
-	        } else if(key == "Brightness") {
-	            brightness = value; 
-	        } else if(key == "Hue") {
-	            hue = value;
-	        } else if(key == "Saturation") {
-	            saturation = value;
-	        } else if(key == "ColorTemp") {
-	            colortemp = value;
-	        }
-	    }
-	    
-	    bool onoff_state = (bool) atoi(onoff.data());
-		long long long_brightness = atoll (brightness.data());
-	    long long long_hue = atoll (hue.data());
-	    long long long_saturation = atoll (saturation.data());
-	    long long long_colortemp = atoll (colortemp.data());
+        while(std::getline(ss, line))
+        {
+            std::string key = line.substr(0, line.find(delimiter));
+            std::string value = line.substr(line.find(delimiter)+1);
+            if(key == "OnOff") {
+                onoff = value;
+            } else if(key == "Brightness") {
+                brightness = value; 
+            } else if(key == "Hue") {
+                hue = value;
+            } else if(key == "Saturation") {
+                saturation = value;
+            } else if(key == "ColorTemp") {
+                colortemp = value;
+            }
+        }
+        
+        bool onoff_state = (bool) atoi(onoff.data());
+        long long long_brightness = atoll (brightness.data());
+        long long long_hue = atoll (hue.data());
+        long long long_saturation = atoll (saturation.data());
+        long long long_colortemp = atoll (colortemp.data());
 
-	    long long brightness_int = color_remap_long_long(long_brightness, COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_PERCENT);
-	    long long hue_int        = color_remap_long_long(long_hue,        COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_360DEG);
-	    long long saturation_int = color_remap_long_long(long_saturation, COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_PERCENT);
-	    long long colortemp_int  = color_remap_long_long(long_colortemp,  COLOR_TEMPERATURE_MIN_UINT32, COLOR_TEMPERATURE_MAX_UINT32, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
+        long long brightness_int = color_remap_long_long(long_brightness, COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_PERCENT);
+        long long hue_int        = color_remap_long_long(long_hue,        COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_360DEG);
+        long long saturation_int = color_remap_long_long(long_saturation, COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_PERCENT);
+        long long colortemp_int  = color_remap_long_long(long_colortemp,  COLOR_TEMPERATURE_MIN_UINT32, COLOR_TEMPERATURE_MAX_UINT32, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
 
-	    std::cout <<  "\n{\"onOff\": " << onoff << "," << std::endl;
-	    std::cout <<  "\"brightness\": " << brightness << "," << std::endl;
-	    std::cout <<  "\"hue\": " << hue << "," << std::endl;
-	    std::cout <<  "\"saturation\": " << saturation << "," << std::endl;
-	    std::cout <<  "\"colorTemp\": " << colortemp << "}" << std::endl;
+        std::cout <<  "\n{\"onOff\": " << onoff << "," << std::endl;
+        std::cout <<  "\"brightness\": " << brightness << "," << std::endl;
+        std::cout <<  "\"hue\": " << hue << "," << std::endl;
+        std::cout <<  "\"saturation\": " << saturation << "," << std::endl;
+        std::cout <<  "\"colorTemp\": " << colortemp << "}" << std::endl;
 
-	    printf("\nonOff: %s\n", (onoff_state)?"true":"false");
-	    printf("brightness: %lld\n", long_brightness);
-	    printf("hue: %lld\n", long_hue);
-	    printf("saturation: %lld\n", long_saturation);
-	    printf("colorTemp: %lld\n", long_colortemp);
-	    printf("Brightness: %lld\n", brightness_int);
-	    printf("Hue: %lld\n", hue_int);
-	    printf("Saturation: %lld\n", saturation_int);
-	    printf("ColorTemp: %lld\n\n", colortemp_int);
+        printf("\nonOff: %s\n", (onoff_state)?"true":"false");
+        printf("brightness: %lld\n", long_brightness);
+        printf("hue: %lld\n", long_hue);
+        printf("saturation: %lld\n", long_saturation);
+        printf("colorTemp: %lld\n", long_colortemp);
+        printf("Brightness: %lld\n", brightness_int);
+        printf("Hue: %lld\n", hue_int);
+        printf("Saturation: %lld\n", saturation_int);
+        printf("ColorTemp: %lld\n\n", colortemp_int);
 
 
         if(muzzley_publish_lampState(lampID, onoff_state, _muzzley_lighting_client)==false){
@@ -1791,7 +1791,7 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         double saturation_double = color_remap_double(saturation_int, COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, COLOR_DOUBLE_MAX);
                     value_double = color_remap_double(brightness_int, COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, COLOR_DOUBLE_MAX);
 
-		double red_double, green_double, blue_double;
+        double red_double, green_double, blue_double;
         HSVtoRGB(&red_double, &green_double, &blue_double, hue_double, saturation_double, value_double);
 
         int red   = (int)color_remap_double(red_double,   COLOR_MIN, COLOR_DOUBLE_MAX, COLOR_MIN, COLOR_RGB_MAX);
@@ -1801,7 +1801,7 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         printf("\nHue: %f\n", hue_double);
         printf("Saturation: %f\n", saturation_double);
         printf("Brightness: %f\n", value_double);
-		printf("Red: %f\n", red_double);
+        printf("Red: %f\n", red_double);
         printf("Green: %f\n", green_double);
         printf("Blue: %f\n", blue_double);  
         printf("Red: %d\n", red);
@@ -1813,41 +1813,41 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         }else{
             cout  << "Published lampcolorRGB to muzzley sucessfully" << endl << flush;
         }
-	        
-	    return true;
-	}catch(exception& e){
+            
+        return true;
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
     }
 }
 
 bool muzzley_handle_lighting_write_status_request(LampManager& lampManager, string component, bool bool_status){
-	int status;
-	try{
-		status = lampManager.TransitionLampStateOnOffField(component, bool_status);
+    int status;
+    try{
+        status = lampManager.TransitionLampStateOnOffField(component, bool_status);
         if(status != LSF_OK)
             cout << "LampManager Error: " << status << endl << flush;
-       	return true;
-	}catch(exception& e){
+           return true;
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
     }
 }
 
 bool muzzley_handle_lighting_write_brightness_request(LampManager& lampManager, string component, double brightness){
-	int status;
-	try{
-		brightness = color_remap_double(brightness, COLOR_MIN, COLOR_DOUBLE_MAX, COLOR_MIN, (COLOR_MAX_UINT32-1));
-		long long long_brightness = (long long) brightness;
+    int status;
+    try{
+        brightness = color_remap_double(brightness, COLOR_MIN, COLOR_DOUBLE_MAX, COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_brightness = (long long) brightness;
 
-		printf("Received brightness double: %f\n", brightness);
-		printf("Received brightness long: %lld\n", long_brightness);
+        printf("Received brightness double: %f\n", brightness);
+        printf("Received brightness long: %lld\n", long_brightness);
 
-		status = lampManager.TransitionLampStateBrightnessField(component, long_brightness);
-		if(status != LSF_OK)
-		    cout << "LampManager Error: " << status << endl << flush;
-		return true;
-	}catch(exception& e){
+        status = lampManager.TransitionLampStateBrightnessField(component, long_brightness);
+        if(status != LSF_OK)
+            cout << "LampManager Error: " << status << endl << flush;
+        return true;
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
     }
@@ -1855,59 +1855,59 @@ bool muzzley_handle_lighting_write_brightness_request(LampManager& lampManager, 
 
 
 bool muzzley_handle_lighting_write_RGB_request(LampManager& lampManager, string component, int red, int green, int blue){
-	int status;
-	try{
-	    double red_double   = color_remap_double(red,   COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
-	    double green_double = color_remap_double(green, COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
-	    double blue_double  = color_remap_double(blue,  COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
+    int status;
+    try{
+        double red_double   = color_remap_double(red,   COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
+        double green_double = color_remap_double(green, COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
+        double blue_double  = color_remap_double(blue,  COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
 
-	    double hue_double, saturation_double, value_double;
-	    RGBtoHSV(red_double, green_double, blue_double, &hue_double, &saturation_double, &value_double);
+        double hue_double, saturation_double, value_double;
+        RGBtoHSV(red_double, green_double, blue_double, &hue_double, &saturation_double, &value_double);
 
-	    long long long_hue = color_remap_long_long(round(hue_double), COLOR_MIN, COLOR_MAX_360DEG, COLOR_MIN, (COLOR_MAX_UINT32-1));
-	    long long long_saturation = color_remap_long_long(round(saturation_double), COLOR_MIN, COLOR_DOUBLE_MAX, COLOR_MIN, (COLOR_MAX_UINT32-1));
-	    long long long_brightness = color_remap_long_long(round(value_double), COLOR_MIN, COLOR_DOUBLE_MAX, COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_hue = color_remap_long_long(round(hue_double), COLOR_MIN, COLOR_MAX_360DEG, COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_saturation = color_remap_long_long(round((saturation_double*100)), COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_brightness = color_remap_long_long(round((value_double*100)), COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
 
         printf("Received Red int: %d\n", red);
-	    printf("Received Green int: %d\n", green);
-	    printf("Received Blue int: %d\n", blue);
-	    printf("Calculated hue double: %f\n", hue_double);
-	    printf("Calculated saturation double: %f\n", saturation_double);
-	    printf("Calculated value double: %f\n", value_double);
-	    printf("Brightness: %lld\n", long_brightness);
-	    printf("Hue: %lld\n", long_hue);
-	    printf("Saturation: %lld\n", long_saturation);
-	    
-		//onoff/Hue/Saturation/Colortemp/Brightness
-	    LampState state(true, long_hue, long_saturation, COLOR_TEMPERATURE_DEFAULT_DEC, long_brightness);
-	    status = lampManager.TransitionLampState(component, state);
-	    if(status != LSF_OK)
-	        cout << "LampManager Error: " << status << endl << flush;
-	    return true; 
-	}catch(exception& e){
+        printf("Received Green int: %d\n", green);
+        printf("Received Blue int: %d\n", blue);
+        printf("Calculated hue double: %f\n", hue_double);
+        printf("Calculated saturation double: %f\n", saturation_double);
+        printf("Calculated value double: %f\n", value_double);
+        printf("Brightness: %lld\n", long_brightness);
+        printf("Hue: %lld\n", long_hue);
+        printf("Saturation: %lld\n", long_saturation);
+        
+        //onoff/Hue/Saturation/Colortemp/Brightness
+        LampState state(true, long_hue, long_saturation, COLOR_TEMPERATURE_DEFAULT_DEC, long_brightness);
+        status = lampManager.TransitionLampState(component, state);
+        if(status != LSF_OK)
+            cout << "LampManager Error: " << status << endl << flush;
+        return true; 
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
     }
 }
 
 bool muzzley_handle_lighting_read_request(LampManager& lampManager, string component, string property, string cid, int t){
-	int status;
-	try{
-		time_t tm = std::time(0);
-		req_vec.push_back(make_tuple(component, property, cid, t, tm, DEVICE_BULB));
+    int status;
+    try{
+        time_t tm = std::time(0);
+        req_vec.push_back(make_tuple(component, property, cid, t, tm, DEVICE_BULB));
         status = lampManager.GetLampState(component);
         if(status != LSF_OK)
             cout << "LampManager Error: " << status << endl << flush;
         muzzley_clean_request_vector();
         return true;
-	}catch(exception& e){
+    }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
     }
 }
 
 bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT _data){
-	string io = (string)_data["d"]["p"]["io"];
+    string io = (string)_data["d"]["p"]["io"];
     string component =  (string)_data["d"]["p"]["component"];
     string property = (string)_data["d"]["p"]["property"];
     string user_name = (string)_data["d"]["u"]["name"];
@@ -1919,7 +1919,7 @@ bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT
     print_request_vector();
 
     if (io=="r"){
-    	muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
+        muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
     }
     if (io=="w"){
         if(property=="status"){
@@ -1936,8 +1936,8 @@ bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT
             int blue  = (int)_data["d"]["p"]["data"]["value"]["b"];
             muzzley_handle_lighting_write_RGB_request(lampManager, component, red,  green,  blue);                                
         }
-	}
-	return true;
+    }
+    return true;
 }
 
 
@@ -1945,7 +1945,7 @@ bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT
 bool muzzley_publish_plug_state(string plugID, bool onoff){
     try{
 
-    	int semaphore = semaphore_start();
+        int semaphore = semaphore_start();
 
         muzzley::Subscription _s1;
         _s1.setNamespace(MUZZLEY_WORKSPACE);
@@ -1958,29 +1958,29 @@ bool muzzley_publish_plug_state(string plugID, bool onoff){
 
         int pos = get_request_vector_pos(plugID, PROPERTY_STATUS);
         if(pos!=-1){
-			_m1.setStatus(true);
-			_m1.setCorrelationID(get_request_vector_CID(pos));
-			_m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-			_m1.setData(JSON(
-	           "value" <<  onoff <<
-	           "profile" << MUZZLEY_PLUGS_PROFILEID <<
-	           "channel" << muzzley_plugs_deviceKey <<
-	           "component" << plugID <<
-	           "property" << PROPERTY_STATUS <<
-	           "data" << JSON(
-	               "value" <<  onoff
-	               )
-	        ));
+            _m1.setStatus(true);
+            _m1.setCorrelationID(get_request_vector_CID(pos));
+            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
+            _m1.setData(JSON(
+               "value" <<  onoff <<
+               "profile" << MUZZLEY_PLUGS_PROFILEID <<
+               "channel" << muzzley_plugs_deviceKey <<
+               "component" << plugID <<
+               "property" << PROPERTY_STATUS <<
+               "data" << JSON(
+                   "value" <<  onoff
+                   )
+            ));
 
-			//cout << _s1 << endl << flush;
-	        //cout << _m1 << endl << flush;
-	        semaphore_lock(semaphore);
-	        _muzzley_plugs_client.reply(_m1, _m1);
-	        semaphore_unlock(semaphore);
-	        delete_request_vector_pos(pos);
-	        cout << "Replyed plug status!" << endl << flush;
-	        return true;
-		}
+            //cout << _s1 << endl << flush;
+            //cout << _m1 << endl << flush;
+            semaphore_lock(semaphore);
+            _muzzley_plugs_client.reply(_m1, _m1);
+            semaphore_unlock(semaphore);
+            delete_request_vector_pos(pos);
+            cout << "Replyed plug status!" << endl << flush;
+            return true;
+        }
 
         _m1.setData(JSON(
             "io" << "i" <<
@@ -2003,8 +2003,8 @@ bool muzzley_publish_plug_state(string plugID, bool onoff){
 
 bool muzzley_publish_plug_string(string plugID, string property, string value){
     try{
-    	
-    	int semaphore = semaphore_start();
+        
+        int semaphore = semaphore_start();
 
         muzzley::Subscription _s1;
         _s1.setNamespace(MUZZLEY_WORKSPACE);
@@ -2017,29 +2017,29 @@ bool muzzley_publish_plug_string(string plugID, string property, string value){
 
         int pos = get_request_vector_pos(plugID, property);
         if(pos!=-1){
-			_m1.setStatus(true);
-			_m1.setCorrelationID(get_request_vector_CID(pos));
-			_m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-			_m1.setData(JSON(
-	           "value" <<  value <<
-	           "profile" << MUZZLEY_PLUGS_PROFILEID <<
-	           "channel" << muzzley_plugs_deviceKey <<
-	           "component" << plugID <<
-	           "property" << property <<
-	           "data" << JSON(
-	               "value" <<  value
-	               )
-	        ));
+            _m1.setStatus(true);
+            _m1.setCorrelationID(get_request_vector_CID(pos));
+            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
+            _m1.setData(JSON(
+               "value" <<  value <<
+               "profile" << MUZZLEY_PLUGS_PROFILEID <<
+               "channel" << muzzley_plugs_deviceKey <<
+               "component" << plugID <<
+               "property" << property <<
+               "data" << JSON(
+                   "value" <<  value
+                   )
+            ));
 
-			//cout << _s1 << endl << flush;
-	        //cout << _m1 << endl << flush;
-	        semaphore_lock(semaphore);
-	        _muzzley_plugs_client.reply(_m1, _m1);
-	        semaphore_unlock(semaphore);
-	        delete_request_vector_pos(pos);
-	        cout << "Replyed plug " << property << " string!" << endl << flush;
-	        return true;
-		}
+            //cout << _s1 << endl << flush;
+            //cout << _m1 << endl << flush;
+            semaphore_lock(semaphore);
+            _muzzley_plugs_client.reply(_m1, _m1);
+            semaphore_unlock(semaphore);
+            delete_request_vector_pos(pos);
+            cout << "Replyed plug " << property << " string!" << endl << flush;
+            return true;
+        }
 
         _m1.setData(JSON(
             "io" << "i" <<
@@ -2061,234 +2061,234 @@ bool muzzley_publish_plug_string(string plugID, string property, string value){
 }
 
 void muzzley_handle_plug_read_status_request(string component, string cid, int t){
-	time_t tm = std::time(0);
-	req_vec.push_back(make_tuple(component, PROPERTY_STATUS, cid, t, tm, DEVICE_PLUG));
+    time_t tm = std::time(0);
+    req_vec.push_back(make_tuple(component, PROPERTY_STATUS, cid, t, tm, DEVICE_PLUG));
 
-	int pos = get_plug_vector_pos(component);
-	Property* status_property = get_plug_vector_property_status(pos);
+    int pos = get_plug_vector_pos(component);
+    Property* status_property = get_plug_vector_property_status(pos);
 
-	if(status_property==NULL){
-		return;
-	}else{
-		const char* status = status_property->getPropertyValue().charValue;
-		cout << "Plug Status: " << status << endl << flush;
-		bool onoff;
-		
-		if(strcmp(status, "Switch On")==0)
-			onoff=true;
-		else
-			onoff=false;
-		
-		muzzley_publish_plug_state(component, onoff);
-	}
+    if(status_property==NULL){
+        return;
+    }else{
+        const char* status = status_property->getPropertyValue().charValue;
+        cout << "Plug Status: " << status << endl << flush;
+        bool onoff;
+        
+        if(strcmp(status, "Switch On")==0)
+            onoff=true;
+        else
+            onoff=false;
+        
+        muzzley_publish_plug_state(component, onoff);
+    }
 
 }
 
 void muzzley_handle_plug_read_voltage_request(string component, string cid, int t){
-	time_t tm = std::time(0);
-	req_vec.push_back(make_tuple(component, PROPERTY_VOLTAGE, cid, t, tm, DEVICE_PLUG));
-	
-	int pos = get_plug_vector_pos(component);
-	if(pos==-1)
-		return;
+    time_t tm = std::time(0);
+    req_vec.push_back(make_tuple(component, PROPERTY_VOLTAGE, cid, t, tm, DEVICE_PLUG));
+    
+    int pos = get_plug_vector_pos(component);
+    if(pos==-1)
+        return;
 
-	Property* voltage_property = get_plug_vector_property_voltage(pos);
+    Property* voltage_property = get_plug_vector_property_voltage(pos);
 
-	if(voltage_property==NULL){
-		cout << "Voltage not found" << endl << flush; 
-	}else{
-		const char* voltage = voltage_property->getPropertyValue().charValue;
-		muzzley_publish_plug_string(component, PROPERTY_VOLTAGE, voltage);
-	    muzzley_clean_request_vector();
-	}
+    if(voltage_property==NULL){
+        cout << "Voltage not found" << endl << flush; 
+    }else{
+        const char* voltage = voltage_property->getPropertyValue().charValue;
+        muzzley_publish_plug_string(component, PROPERTY_VOLTAGE, voltage);
+        muzzley_clean_request_vector();
+    }
 }
 
 void muzzley_handle_plug_read_current_request(string component, string cid, int t){
-	time_t tm = std::time(0);
-	req_vec.push_back(make_tuple(component, PROPERTY_CURRENT, cid, t, tm, DEVICE_PLUG));
+    time_t tm = std::time(0);
+    req_vec.push_back(make_tuple(component, PROPERTY_CURRENT, cid, t, tm, DEVICE_PLUG));
 
-	int pos = get_plug_vector_pos(component);
-	if(pos==-1)
-		return;
+    int pos = get_plug_vector_pos(component);
+    if(pos==-1)
+        return;
 
-	Property* current_property = get_plug_vector_property_current(pos);
+    Property* current_property = get_plug_vector_property_current(pos);
 
-	if(current_property==NULL){
-		cout << "Current not found" << endl << flush; 
-	}else{
-		const char* current = current_property->getPropertyValue().charValue;
-		muzzley_publish_plug_string(component, PROPERTY_CURRENT, current);
-	    muzzley_clean_request_vector();
-	}
+    if(current_property==NULL){
+        cout << "Current not found" << endl << flush; 
+    }else{
+        const char* current = current_property->getPropertyValue().charValue;
+        muzzley_publish_plug_string(component, PROPERTY_CURRENT, current);
+        muzzley_clean_request_vector();
+    }
 }
 
 void muzzley_handle_plug_read_frequency_request(string component, string cid, int t){
-	string property = PROPERTY_FREQUENCY;
-	time_t tm = std::time(0);
-	req_vec.push_back(make_tuple(component, property, cid, t, tm, DEVICE_PLUG));
+    string property = PROPERTY_FREQUENCY;
+    time_t tm = std::time(0);
+    req_vec.push_back(make_tuple(component, property, cid, t, tm, DEVICE_PLUG));
 
-	int pos = get_plug_vector_pos(component);
-	if(pos==-1)
-		return;
+    int pos = get_plug_vector_pos(component);
+    if(pos==-1)
+        return;
 
-	Property* frequency_property = get_plug_vector_property_frequency(pos);
+    Property* frequency_property = get_plug_vector_property_frequency(pos);
 
-	if(frequency_property==NULL){
-		cout << "Frequency not found" << endl << flush; 
-	}else{
-		const char* frequency = frequency_property->getPropertyValue().charValue;
-		muzzley_publish_plug_string(component, property, frequency);
-	    muzzley_clean_request_vector();
-	}
+    if(frequency_property==NULL){
+        cout << "Frequency not found" << endl << flush; 
+    }else{
+        const char* frequency = frequency_property->getPropertyValue().charValue;
+        muzzley_publish_plug_string(component, property, frequency);
+        muzzley_clean_request_vector();
+    }
 }
 
 void muzzley_handle_plug_read_power_request(string component, string cid, int t){
-	time_t tm = std::time(0);
-	req_vec.push_back(make_tuple(component, PROPERTY_POWER, cid, t, tm, DEVICE_PLUG));
+    time_t tm = std::time(0);
+    req_vec.push_back(make_tuple(component, PROPERTY_POWER, cid, t, tm, DEVICE_PLUG));
 
-	int pos = get_plug_vector_pos(component);
-	if(pos==-1)
-		return;
+    int pos = get_plug_vector_pos(component);
+    if(pos==-1)
+        return;
 
-	Property* power_property = get_plug_vector_property_power(pos);
+    Property* power_property = get_plug_vector_property_power(pos);
 
-	if(power_property==NULL){
-		cout << "Power not found" << endl << flush; 
-	}else{
-		const char* energy = power_property->getPropertyValue().charValue;
-		muzzley_publish_plug_string(component, PROPERTY_POWER, energy);
-	    muzzley_clean_request_vector();
-	}
+    if(power_property==NULL){
+        cout << "Power not found" << endl << flush; 
+    }else{
+        const char* energy = power_property->getPropertyValue().charValue;
+        muzzley_publish_plug_string(component, PROPERTY_POWER, energy);
+        muzzley_clean_request_vector();
+    }
 }
 
 void muzzley_handle_plug_read_energy_request(string component, string cid, int t){
-	time_t tm = std::time(0);
-	req_vec.push_back(make_tuple(component, PROPERTY_ENERGY, cid, t, tm, DEVICE_PLUG));
+    time_t tm = std::time(0);
+    req_vec.push_back(make_tuple(component, PROPERTY_ENERGY, cid, t, tm, DEVICE_PLUG));
 
-	int pos = get_plug_vector_pos(component);
-	if(pos==-1)
-		return;
+    int pos = get_plug_vector_pos(component);
+    if(pos==-1)
+        return;
 
-	Property* energy_property = get_plug_vector_property_energy(pos);
+    Property* energy_property = get_plug_vector_property_energy(pos);
 
-	if(energy_property==NULL){
-		cout << "Energy not found" << endl << flush; 
-	}else{
-		const char* energy = energy_property->getPropertyValue().charValue;
-		muzzley_publish_plug_string(component, PROPERTY_ENERGY, energy);
-	    muzzley_clean_request_vector();
-	}
+    if(energy_property==NULL){
+        cout << "Energy not found" << endl << flush; 
+    }else{
+        const char* energy = energy_property->getPropertyValue().charValue;
+        muzzley_publish_plug_string(component, PROPERTY_ENERGY, energy);
+        muzzley_clean_request_vector();
+    }
 }
 
 
 void muzzley_handle_plug_write_status_request(string component, bool bool_status){
 
-	int pos = get_plug_vector_pos(component);
-	if(pos==-1)
-		return;
+    int pos = get_plug_vector_pos(component);
+    if(pos==-1)
+        return;
 
-	Property* status_property = get_plug_vector_property_status(pos);
-	Action* seton_action = get_plug_vector_action_set_on(pos);
-	Action* setoff_action = get_plug_vector_action_set_off(pos);
+    Property* status_property = get_plug_vector_property_status(pos);
+    Action* seton_action = get_plug_vector_action_set_on(pos);
+    Action* setoff_action = get_plug_vector_action_set_off(pos);
 
-	if(status_property==NULL){
-		cout << "Status not found" << endl << flush; 
-	}else{
-		if(bool_status){
-    		alljoyn_execute_action(seton_action);
-    		//muzzley_publish_plug_state(component, true);			        	
+    if(status_property==NULL){
+        cout << "Status not found" << endl << flush; 
+    }else{
+        if(bool_status){
+            alljoyn_execute_action(seton_action);
+            //muzzley_publish_plug_state(component, true);                        
         }
         else{  
-        	alljoyn_execute_action(setoff_action);
-        	//muzzley_publish_plug_state(component, false);
-  		}
-	}
+            alljoyn_execute_action(setoff_action);
+            //muzzley_publish_plug_state(component, false);
+          }
+    }
 }
 
 void muzzley_update_plug_properties(string component){
 
-	int pos = get_plug_vector_pos(component);
-	if(pos==-1)
-		return;
+    int pos = get_plug_vector_pos(component);
+    if(pos==-1)
+        return;
 
-	/*
-	Action* getp_action = get_plug_vector_action_getproperties(pos);
-	if(getp_action==NULL)
-		cout << "Get Properties action not found" << endl << flush; 
-	else{
-		sleep(2);
-		alljoyn_execute_action(getp_action);
-	}
-	*/
-
-	/*
-	double property_duration = difftime(time(0), get_plug_vector_time(pos));
-    if(property_duration>2){
-		Action* getp_action = get_plug_vector_action_getproperties(pos);
-		if(getp_action==NULL)
-			cout << "Get Properties action not found" << endl << flush; 
-		else
-			alljoyn_execute_action(getp_action);
+    /*
+    Action* getp_action = get_plug_vector_action_getproperties(pos);
+    if(getp_action==NULL)
+        cout << "Get Properties action not found" << endl << flush; 
+    else{
+        sleep(2);
+        alljoyn_execute_action(getp_action);
     }
-	*/
+    */
 
-	Action* getp_action = get_plug_vector_action_getproperties(pos);
-	if(getp_action==NULL)
-		cout << "Get Properties action not found" << endl << flush; 
-	else
-		alljoyn_execute_action(getp_action);
+    /*
+    double property_duration = difftime(time(0), get_plug_vector_time(pos));
+    if(property_duration>2){
+        Action* getp_action = get_plug_vector_action_getproperties(pos);
+        if(getp_action==NULL)
+            cout << "Get Properties action not found" << endl << flush; 
+        else
+            alljoyn_execute_action(getp_action);
+    }
+    */
 
-	Property* status_property = get_plug_vector_property_status(pos);
-	Property* voltage_property = get_plug_vector_property_voltage(pos);
-	Property* current_property = get_plug_vector_property_current(pos);
-	Property* frequency_property = get_plug_vector_property_frequency(pos);
-	Property* power_property = get_plug_vector_property_power(pos);
-	Property* energy_property = get_plug_vector_property_energy(pos);
+    Action* getp_action = get_plug_vector_action_getproperties(pos);
+    if(getp_action==NULL)
+        cout << "Get Properties action not found" << endl << flush; 
+    else
+        alljoyn_execute_action(getp_action);
 
-	if(status_property==NULL){
-		cout << "Status not found" << endl << flush; 
-	}else{
-		const char* status = status_property->getPropertyValue().charValue;\
-		if(strcmp(status, "Switch On")==0){
-			muzzley_publish_plug_state(component, true);
-		}else
-			muzzley_publish_plug_state(component, false);
-	}
-	if(voltage_property==NULL){
-		cout << "Voltage not found" << endl << flush; 
-	}else{
-		const char* voltage = voltage_property->getPropertyValue().charValue;
-		muzzley_publish_plug_string(component, PROPERTY_VOLTAGE, voltage);
-	}
-	if(current_property==NULL){
-		cout << "Current not found" << endl << flush; 
-	}else{
-		const char* current = current_property->getPropertyValue().charValue;
-		muzzley_publish_plug_string(component, PROPERTY_CURRENT, current);
-	}
-	if(frequency_property==NULL){
-		cout << "Frequency not found" << endl << flush; 
-	}else{
-		const char* freq = frequency_property->getPropertyValue().charValue;
-		muzzley_publish_plug_string(component, PROPERTY_FREQUENCY, freq);
-	}
-	if(power_property==NULL){
-		cout << "Power not found" << endl << flush; 
-	}else{
-		const char* power = power_property->getPropertyValue().charValue;
-		muzzley_publish_plug_string(component, PROPERTY_POWER, power);
-	}
-	if(energy_property==NULL){
-		cout << "Energy not found" << endl << flush; 
-	}else{
-		const char* energy = energy_property->getPropertyValue().charValue;
-		muzzley_publish_plug_string(component, PROPERTY_ENERGY, energy);
-	}
-	muzzley_clean_request_vector();
+    Property* status_property = get_plug_vector_property_status(pos);
+    Property* voltage_property = get_plug_vector_property_voltage(pos);
+    Property* current_property = get_plug_vector_property_current(pos);
+    Property* frequency_property = get_plug_vector_property_frequency(pos);
+    Property* power_property = get_plug_vector_property_power(pos);
+    Property* energy_property = get_plug_vector_property_energy(pos);
+
+    if(status_property==NULL){
+        cout << "Status not found" << endl << flush; 
+    }else{
+        const char* status = status_property->getPropertyValue().charValue;\
+        if(strcmp(status, "Switch On")==0){
+            muzzley_publish_plug_state(component, true);
+        }else
+            muzzley_publish_plug_state(component, false);
+    }
+    if(voltage_property==NULL){
+        cout << "Voltage not found" << endl << flush; 
+    }else{
+        const char* voltage = voltage_property->getPropertyValue().charValue;
+        muzzley_publish_plug_string(component, PROPERTY_VOLTAGE, voltage);
+    }
+    if(current_property==NULL){
+        cout << "Current not found" << endl << flush; 
+    }else{
+        const char* current = current_property->getPropertyValue().charValue;
+        muzzley_publish_plug_string(component, PROPERTY_CURRENT, current);
+    }
+    if(frequency_property==NULL){
+        cout << "Frequency not found" << endl << flush; 
+    }else{
+        const char* freq = frequency_property->getPropertyValue().charValue;
+        muzzley_publish_plug_string(component, PROPERTY_FREQUENCY, freq);
+    }
+    if(power_property==NULL){
+        cout << "Power not found" << endl << flush; 
+    }else{
+        const char* power = power_property->getPropertyValue().charValue;
+        muzzley_publish_plug_string(component, PROPERTY_POWER, power);
+    }
+    if(energy_property==NULL){
+        cout << "Energy not found" << endl << flush; 
+    }else{
+        const char* energy = energy_property->getPropertyValue().charValue;
+        muzzley_publish_plug_string(component, PROPERTY_ENERGY, energy);
+    }
+    muzzley_clean_request_vector();
 }
 
 bool muzzley_handle_plug_request(muzzley::JSONObjT _data){
-	string io = (string)_data["d"]["p"]["io"];
+    string io = (string)_data["d"]["p"]["io"];
     string component =  (string)_data["d"]["p"]["component"];
     string property = (string)_data["d"]["p"]["property"];
     string user_name = (string)_data["d"]["u"]["name"];
@@ -2302,29 +2302,29 @@ bool muzzley_handle_plug_request(muzzley::JSONObjT _data){
     
     int pos = get_plug_vector_pos(component);
     if (pos==-1)
-    	return false;
+        return false;
 
     if (io=="r"){
-    	cout << "Receiving read request for plug" << endl << flush;
-    	
-    	if(property==PROPERTY_STATUS){
-    		muzzley_handle_plug_read_status_request(component, cid, t);
-    	}
-    	if(property==PROPERTY_VOLTAGE){
-    		muzzley_handle_plug_read_voltage_request(component, cid, t);
-    	}
-    	if(property==PROPERTY_CURRENT){
-    		muzzley_handle_plug_read_current_request(component, cid, t);
-    	}
-    	if(property==PROPERTY_FREQUENCY){
-    		muzzley_handle_plug_read_frequency_request(component, cid, t);
-    	}
-    	if(property==PROPERTY_POWER){
-    		muzzley_handle_plug_read_power_request(component, cid, t);
-    	}
-    	if(property==PROPERTY_ENERGY){
-    		muzzley_handle_plug_read_energy_request(component, cid, t);
-    	}
+        cout << "Receiving read request for plug" << endl << flush;
+        
+        if(property==PROPERTY_STATUS){
+            muzzley_handle_plug_read_status_request(component, cid, t);
+        }
+        if(property==PROPERTY_VOLTAGE){
+            muzzley_handle_plug_read_voltage_request(component, cid, t);
+        }
+        if(property==PROPERTY_CURRENT){
+            muzzley_handle_plug_read_current_request(component, cid, t);
+        }
+        if(property==PROPERTY_FREQUENCY){
+            muzzley_handle_plug_read_frequency_request(component, cid, t);
+        }
+        if(property==PROPERTY_POWER){
+            muzzley_handle_plug_read_power_request(component, cid, t);
+        }
+        if(property==PROPERTY_ENERGY){
+            muzzley_handle_plug_read_energy_request(component, cid, t);
+        }
     }
     if (io=="w"){
         if(property==PROPERTY_STATUS){
@@ -2332,9 +2332,9 @@ bool muzzley_handle_plug_request(muzzley::JSONObjT _data){
             muzzley_handle_plug_write_status_request(component, bool_status);
             muzzley_update_plug_properties(component);
         }
-	}
-	
-	return true;
+    }
+    
+    return true;
 }
 
 
@@ -2533,312 +2533,312 @@ class MyReceiver : public NotificationReceiver {
 
 void muzzley_parse_plugs_controlpanelunit(string device_id_str, string device_name_str, ControlPanelControllerUnit* cp_unit){
 
-	Property* plug_property_volt=NULL;
-	Property* plug_property_curr=NULL;
-	Property* plug_property_freq=NULL;
-	Property* plug_property_watt=NULL;
-	Property* plug_property_accu=NULL;
-	Property* plug_property_status=NULL;
-	Action* plug_action_on=NULL;
-	Action* plug_action_off=NULL;
-	Action* plug_action_get_properties=NULL;
+    Property* plug_property_volt=NULL;
+    Property* plug_property_curr=NULL;
+    Property* plug_property_freq=NULL;
+    Property* plug_property_watt=NULL;
+    Property* plug_property_accu=NULL;
+    Property* plug_property_status=NULL;
+    Action* plug_action_on=NULL;
+    Action* plug_action_off=NULL;
+    Action* plug_action_get_properties=NULL;
 
-	if(cp_unit==NULL)
-		return;
-	
-	const qcc::String cp_unit_name = cp_unit->getUnitName(); 
-	cout << "AnnounceHandler ControlPanelControllerUnit Name: " << cp_unit_name.c_str() << endl << flush;
+    if(cp_unit==NULL)
+        return;
+    
+    const qcc::String cp_unit_name = cp_unit->getUnitName(); 
+    cout << "AnnounceHandler ControlPanelControllerUnit Name: " << cp_unit_name.c_str() << endl << flush;
 
-	ControlPanel* cp_controlpanel = cp_unit->getControlPanel("rootContainer");
-	if(cp_controlpanel==NULL){
-		cout << "AnnounceHandler RootContainer not found!" << endl << flush;
-	}else{
-			qcc::String cp_panelname = cp_controlpanel->getPanelName();	
-			cout << "AnnounceHandler ControlPanel Name: " << cp_panelname.c_str() << endl << flush;
+    ControlPanel* cp_controlpanel = cp_unit->getControlPanel("rootContainer");
+    if(cp_controlpanel==NULL){
+        cout << "AnnounceHandler RootContainer not found!" << endl << flush;
+    }else{
+            qcc::String cp_panelname = cp_controlpanel->getPanelName();    
+            cout << "AnnounceHandler ControlPanel Name: " << cp_panelname.c_str() << endl << flush;
 
-			const qcc::String cd_path = cp_controlpanel->getObjectPath();
-			cout << "AnnounceHandler ControlPanel Path: " << cd_path.c_str() << endl << flush;
+            const qcc::String cd_path = cp_controlpanel->getObjectPath();
+            cout << "AnnounceHandler ControlPanel Path: " << cd_path.c_str() << endl << flush;
 
-			//Needed by some reason...
-			sleep(1);
+            //Needed by some reason...
+            sleep(1);
 
-			Container* rootContainer = cp_controlpanel->getRootWidget("en");
-			if (rootContainer==NULL) {
-		    	cout << "AnnounceHandler RootContainer not found!" << endl << flush;
-		    }else{
-		    	cout << "AnnounceHandler RootContainer found!" << endl << flush;
-		    	
-		    	//CONTAINER==0
-		    	if (rootContainer->getWidgetType() == 0) {
-			        std::vector<Widget*> childWidgets = rootContainer->getChildWidgets();
-					cout << "AnnounceHandler Print ChildWidgets from rootContainer" << endl << endl << flush;
-					for (size_t i = 0; i < childWidgets.size(); i++) {
-						WidgetType widgetType = childWidgets[i]->getWidgetType();
-						qcc::String name = childWidgets[i]->getWidgetName();
-					 	bool secured = childWidgets[i]->getIsSecured();
-						bool enabled = childWidgets[i]->getIsEnabled();
-						bool writable = childWidgets[i]->getIsWritable();
+            Container* rootContainer = cp_controlpanel->getRootWidget("en");
+            if (rootContainer==NULL) {
+                cout << "AnnounceHandler RootContainer not found!" << endl << flush;
+            }else{
+                cout << "AnnounceHandler RootContainer found!" << endl << flush;
+                
+                //CONTAINER==0
+                if (rootContainer->getWidgetType() == 0) {
+                    std::vector<Widget*> childWidgets = rootContainer->getChildWidgets();
+                    cout << "AnnounceHandler Print ChildWidgets from rootContainer" << endl << endl << flush;
+                    for (size_t i = 0; i < childWidgets.size(); i++) {
+                        WidgetType widgetType = childWidgets[i]->getWidgetType();
+                        qcc::String name = childWidgets[i]->getWidgetName();
+                         bool secured = childWidgets[i]->getIsSecured();
+                        bool enabled = childWidgets[i]->getIsEnabled();
+                        bool writable = childWidgets[i]->getIsWritable();
 
-						uint32_t states = childWidgets[i]->getStates();
-						uint32_t bgcolor = childWidgets[i]->getBgColor();
-						const qcc::String label = childWidgets[i]->getLabel();
-						cout << "Widget Type: " << widgetType << endl << flush;
-						std::vector<Widget*> childchildWidgets;
-							
-							switch(widgetType){
-								case WIDGET_TYPE_ACTION:
-									cout << "Widget Type: ACTION" << endl << flush;
-						            break;
-								case WIDGET_TYPE_ACTION_WITH_DIALOG:
-									cout << "Widget Type: ACTION_WITH_DIALOG" << endl << flush;
-						            break;
-						        case WIDGET_TYPE_LABEL:
-						        	cout << "Widget Type: LABEL" << endl << flush;
-						            break;
-						        case WIDGET_TYPE_PROPERTY:
-						        	cout << "Widget Type: PROPERTY" << endl << flush;
-						        	plug_property_status=((Property*)childWidgets[i]);
-						        	break;
-						        case WIDGET_TYPE_CONTAINER:
-						        	cout << "Widget Type: CONTAINER" << endl << endl << flush;
-						     
-						        	childchildWidgets = ((Container*)childWidgets[i])->getChildWidgets();
-						        	for (size_t j = 0; j < childchildWidgets.size(); j++) {
-						        		widgetType = childchildWidgets[j]->getWidgetType();
-										name = childchildWidgets[j]->getWidgetName();
-									 	secured = childchildWidgets[j]->getIsSecured();
-										enabled = childchildWidgets[j]->getIsEnabled();
-										writable = childchildWidgets[j]->getIsWritable();
+                        uint32_t states = childWidgets[i]->getStates();
+                        uint32_t bgcolor = childWidgets[i]->getBgColor();
+                        const qcc::String label = childWidgets[i]->getLabel();
+                        cout << "Widget Type: " << widgetType << endl << flush;
+                        std::vector<Widget*> childchildWidgets;
+                            
+                            switch(widgetType){
+                                case WIDGET_TYPE_ACTION:
+                                    cout << "Widget Type: ACTION" << endl << flush;
+                                    break;
+                                case WIDGET_TYPE_ACTION_WITH_DIALOG:
+                                    cout << "Widget Type: ACTION_WITH_DIALOG" << endl << flush;
+                                    break;
+                                case WIDGET_TYPE_LABEL:
+                                    cout << "Widget Type: LABEL" << endl << flush;
+                                    break;
+                                case WIDGET_TYPE_PROPERTY:
+                                    cout << "Widget Type: PROPERTY" << endl << flush;
+                                    plug_property_status=((Property*)childWidgets[i]);
+                                    break;
+                                case WIDGET_TYPE_CONTAINER:
+                                    cout << "Widget Type: CONTAINER" << endl << endl << flush;
+                             
+                                    childchildWidgets = ((Container*)childWidgets[i])->getChildWidgets();
+                                    for (size_t j = 0; j < childchildWidgets.size(); j++) {
+                                        widgetType = childchildWidgets[j]->getWidgetType();
+                                        name = childchildWidgets[j]->getWidgetName();
+                                         secured = childchildWidgets[j]->getIsSecured();
+                                        enabled = childchildWidgets[j]->getIsEnabled();
+                                        writable = childchildWidgets[j]->getIsWritable();
 
-										states = childchildWidgets[j]->getStates();
-										bgcolor = childchildWidgets[j]->getBgColor();
-										const qcc::String label = childchildWidgets[j]->getLabel();
-										cout << "	Widget Type: " << widgetType << endl << flush;
-											switch(widgetType){
-												case WIDGET_TYPE_ACTION:
-													cout << "	Widget Type: ACTION" << endl << flush;
-													if(label=="On")
-														plug_action_on=((Action*)childchildWidgets[j]);
-													else if (label=="Off")
-														plug_action_off=((Action*)childchildWidgets[j]);
-													else if (label=="Get Properties")
-														plug_action_get_properties=((Action*)childchildWidgets[j]);
-										            break;
-												case WIDGET_TYPE_ACTION_WITH_DIALOG:
-													cout << "	Widget Type: ACTION_WITH_DIALOG" << endl << flush;
-										            break;
-										        case WIDGET_TYPE_LABEL:
-										        	cout << "	Widget Type: LABEL" << endl << flush;
-										            break;
-										        case WIDGET_TYPE_PROPERTY:
-										        	cout << "	Widget Type: PROPERTY" << endl << flush;
-										        	if(label=="Volt(V):"){
-										        		plug_property_volt=((Property*)childchildWidgets[j]);
-										        		plug_property_volt->setValue("");
-										        	}
-										        	if(label=="Curr(A):"){
-										        		plug_property_curr=((Property*)childchildWidgets[j]);
-										        		plug_property_curr->setValue("");
-										        	}
-										        	if(label=="Freq(Hz):"){
-										        		plug_property_freq=((Property*)childchildWidgets[j]);
-										        		plug_property_freq->setValue("");
-										        	}
-										        	if(label=="Watt(W):"){
-										        		plug_property_watt=((Property*)childchildWidgets[j]);
-										        		plug_property_watt->setValue("");
-										        	}
-										        	if(label=="ACCU(KWH):"){
-										        		plug_property_accu=((Property*)childchildWidgets[j]);
-										        		plug_property_accu->setValue("");
-										        	}
-										            break;
-										        case WIDGET_TYPE_CONTAINER:
-										        	cout << "	Widget Type: CONTAINER" << endl << flush;
-										            break;
-										        case WIDGET_TYPE_DIALOG:
-										        	cout << "	Widget Type: DIALOG" << endl << flush;
-										            break;
-										        case WIDGET_TYPE_ERROR:
-										        	cout << "	Widget Type: ERROR" << endl << flush;
-										            break;
-										        
-											}
-											cout << "	Label: " << label << endl << flush;
-											cout << "	Secured: " << secured << endl << flush;
-											cout << "	Enabled: " << enabled << endl << flush;
-											cout << "	Writable: " << writable << endl << flush;
-											cout << "	States: " << states << endl << flush;
-											cout << "	BGcolor: " << bgcolor << endl << endl << flush;
-										}
-										
+                                        states = childchildWidgets[j]->getStates();
+                                        bgcolor = childchildWidgets[j]->getBgColor();
+                                        const qcc::String label = childchildWidgets[j]->getLabel();
+                                        cout << "    Widget Type: " << widgetType << endl << flush;
+                                            switch(widgetType){
+                                                case WIDGET_TYPE_ACTION:
+                                                    cout << "    Widget Type: ACTION" << endl << flush;
+                                                    if(label=="On")
+                                                        plug_action_on=((Action*)childchildWidgets[j]);
+                                                    else if (label=="Off")
+                                                        plug_action_off=((Action*)childchildWidgets[j]);
+                                                    else if (label=="Get Properties")
+                                                        plug_action_get_properties=((Action*)childchildWidgets[j]);
+                                                    break;
+                                                case WIDGET_TYPE_ACTION_WITH_DIALOG:
+                                                    cout << "    Widget Type: ACTION_WITH_DIALOG" << endl << flush;
+                                                    break;
+                                                case WIDGET_TYPE_LABEL:
+                                                    cout << "    Widget Type: LABEL" << endl << flush;
+                                                    break;
+                                                case WIDGET_TYPE_PROPERTY:
+                                                    cout << "    Widget Type: PROPERTY" << endl << flush;
+                                                    if(label=="Volt(V):"){
+                                                        plug_property_volt=((Property*)childchildWidgets[j]);
+                                                        plug_property_volt->setValue("");
+                                                    }
+                                                    if(label=="Curr(A):"){
+                                                        plug_property_curr=((Property*)childchildWidgets[j]);
+                                                        plug_property_curr->setValue("");
+                                                    }
+                                                    if(label=="Freq(Hz):"){
+                                                        plug_property_freq=((Property*)childchildWidgets[j]);
+                                                        plug_property_freq->setValue("");
+                                                    }
+                                                    if(label=="Watt(W):"){
+                                                        plug_property_watt=((Property*)childchildWidgets[j]);
+                                                        plug_property_watt->setValue("");
+                                                    }
+                                                    if(label=="ACCU(KWH):"){
+                                                        plug_property_accu=((Property*)childchildWidgets[j]);
+                                                        plug_property_accu->setValue("");
+                                                    }
+                                                    break;
+                                                case WIDGET_TYPE_CONTAINER:
+                                                    cout << "    Widget Type: CONTAINER" << endl << flush;
+                                                    break;
+                                                case WIDGET_TYPE_DIALOG:
+                                                    cout << "    Widget Type: DIALOG" << endl << flush;
+                                                    break;
+                                                case WIDGET_TYPE_ERROR:
+                                                    cout << "    Widget Type: ERROR" << endl << flush;
+                                                    break;
+                                                
+                                            }
+                                            cout << "    Label: " << label << endl << flush;
+                                            cout << "    Secured: " << secured << endl << flush;
+                                            cout << "    Enabled: " << enabled << endl << flush;
+                                            cout << "    Writable: " << writable << endl << flush;
+                                            cout << "    States: " << states << endl << flush;
+                                            cout << "    BGcolor: " << bgcolor << endl << endl << flush;
+                                        }
+                                        
 
-						            break;
-						        case WIDGET_TYPE_DIALOG:
-						        	cout << "Widget Type: DIALOG"<< endl << flush;
-						            break;
-						        case WIDGET_TYPE_ERROR:
-						        	cout << "Widget Type: ERROR"<< endl << flush;
-						            break;
-						        
-							}
-							cout << "Label: " << label << endl << flush;
-							cout << "Secured: " << secured << endl << flush;
-							cout << "Enabled: " << enabled << endl << flush;
-							cout << "Writable: " << writable << endl << flush;
-							cout << "States: " << states << endl << flush;
-							cout << "BGcolor: " << bgcolor << endl << endl << flush;
-							
-					}
-					
-			    }
-				
-			    //DIALOG==1?
-			    else if (rootContainer->getWidgetType() == 1) {
-			    	cout << "AnnounceHandler Widget type->DIALOG" << endl;
-			    } else {
-			        std::cout << "AnnounceHandler RootWidget is of unknown type" << std::endl;
-			    }
-			    
+                                    break;
+                                case WIDGET_TYPE_DIALOG:
+                                    cout << "Widget Type: DIALOG"<< endl << flush;
+                                    break;
+                                case WIDGET_TYPE_ERROR:
+                                    cout << "Widget Type: ERROR"<< endl << flush;
+                                    break;
+                                
+                            }
+                            cout << "Label: " << label << endl << flush;
+                            cout << "Secured: " << secured << endl << flush;
+                            cout << "Enabled: " << enabled << endl << flush;
+                            cout << "Writable: " << writable << endl << flush;
+                            cout << "States: " << states << endl << flush;
+                            cout << "BGcolor: " << bgcolor << endl << endl << flush;
+                            
+                    }
+                    
+                }
+                
+                //DIALOG==1?
+                else if (rootContainer->getWidgetType() == 1) {
+                    cout << "AnnounceHandler Widget type->DIALOG" << endl;
+                } else {
+                    std::cout << "AnnounceHandler RootWidget is of unknown type" << std::endl;
+                }
+                
 
-			}
-	    }
+            }
+        }
 
-	//Working...
-	//plug_vec.push_back(make_tuple(device_id_str, device_name_str, plug_property_status, plug_property_volt, plug_property_curr, plug_property_freq, plug_property_watt , plug_property_accu, plug_action_get_properties, plug_action_on, plug_action_off));
-	del_plug_vector_pos(device_id_str);
-	add_plug_vector_pos(device_id_str, device_name_str, plug_property_status, plug_property_volt, plug_property_curr, plug_property_freq, plug_property_watt , plug_property_accu, plug_action_get_properties, plug_action_on, plug_action_off);
-	muzzley_add_plugs_component(device_id_str, device_name_str);
-	gupnp_generate_plugs_XML();
-	print_plug_vector();
+    //Working...
+    //plug_vec.push_back(make_tuple(device_id_str, device_name_str, plug_property_status, plug_property_volt, plug_property_curr, plug_property_freq, plug_property_watt , plug_property_accu, plug_action_get_properties, plug_action_on, plug_action_off));
+    del_plug_vector_pos(device_id_str);
+    add_plug_vector_pos(device_id_str, device_name_str, plug_property_status, plug_property_volt, plug_property_curr, plug_property_freq, plug_property_watt , plug_property_accu, plug_action_get_properties, plug_action_on, plug_action_off);
+    muzzley_add_plugs_component(device_id_str, device_name_str);
+    gupnp_generate_plugs_XML();
+    print_plug_vector();
 }
 
 static void announceHandlerCallback(qcc::String const& busName, unsigned short version, unsigned short port, const AnnounceHandler::ObjectDescriptions& objectDescs, const AnnounceHandler::AboutData& aboutData){
     try{
 
-		const char* app_name;
-		const char* default_language;
-		const char* device_id;
-		const char* device_name;
-		const char* manufacturer;
-		const char* model_number;
+        const char* app_name;
+        const char* default_language;
+        const char* device_id;
+        const char* device_name;
+        const char* manufacturer;
+        const char* model_number;
 
-		string app_name_str;
-		string default_language_str;
-		string device_id_str;
-		string device_name_str;
-		string manufacturer_str;
-		string model_number_str;
+        string app_name_str;
+        string default_language_str;
+        string device_id_str;
+        string device_name_str;
+        string manufacturer_str;
+        string model_number_str;
 
-		for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
-	        qcc::String key = it->first;
-	        ajn::MsgArg value = it->second;
+        for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
+            qcc::String key = it->first;
+            ajn::MsgArg value = it->second;
 
             if(strcmp(key.c_str(),"AppName")==0){
-            	app_name=value.v_string.str;
-            	app_name_str = string(app_name);
+                app_name=value.v_string.str;
+                app_name_str = string(app_name);
             }
             if(strcmp(key.c_str(),"DeviceId")==0){
-            	device_id=value.v_string.str;
-            	device_id_str = string(device_id);
+                device_id=value.v_string.str;
+                device_id_str = string(device_id);
             }
             if(strcmp(key.c_str(),"DefaultLanguage")==0){
-            	default_language=value.v_string.str;
-            	default_language_str = string(default_language);
+                default_language=value.v_string.str;
+                default_language_str = string(default_language);
             }
             if(strcmp(key.c_str(),"DeviceName")==0){
-            	device_name=value.v_string.str;
-            	device_name_str = string(device_name);
+                device_name=value.v_string.str;
+                device_name_str = string(device_name);
             }
             if(strcmp(key.c_str(),"Manufacturer")==0){
-            	manufacturer=value.v_string.str;
-            	manufacturer_str = string(manufacturer);
+                manufacturer=value.v_string.str;
+                manufacturer_str = string(manufacturer);
             }
             if(strcmp(key.c_str(),"ModelNumber")==0){
-            	model_number=value.v_string.str;
-            	model_number_str = string(model_number);
+                model_number=value.v_string.str;
+                model_number_str = string(model_number);
             }
 
-	    }
+        }
 
-	    cout << endl << "AnnounceHandler AboutData:" << endl << flush;
-	    cout << "AppName: " << app_name_str << endl << flush;
-	    cout << "DeviceID: " << device_id_str << endl << flush;
-	    cout << "DeviceName: " << device_name_str << endl << flush;
-	    cout << "Manufacturer: " << manufacturer_str << endl << flush;
-	    cout << "ModelNumber: " << model_number_str << endl << endl << flush;
-	
-	    cout << "AnnounceHandler ObjectDescriptions:" << endl;
-	    for (AboutClient::ObjectDescriptions::const_iterator it = objectDescs.begin(); it != objectDescs.end(); ++it) {
-	        qcc::String key = it->first;
-	        std::vector<qcc::String> vector = it->second;
+        cout << endl << "AnnounceHandler AboutData:" << endl << flush;
+        cout << "AppName: " << app_name_str << endl << flush;
+        cout << "DeviceID: " << device_id_str << endl << flush;
+        cout << "DeviceName: " << device_name_str << endl << flush;
+        cout << "Manufacturer: " << manufacturer_str << endl << flush;
+        cout << "ModelNumber: " << model_number_str << endl << endl << flush;
+    
+        cout << "AnnounceHandler ObjectDescriptions:" << endl;
+        for (AboutClient::ObjectDescriptions::const_iterator it = objectDescs.begin(); it != objectDescs.end(); ++it) {
+            qcc::String key = it->first;
+            std::vector<qcc::String> vector = it->second;
 
-	        if(key=="/org/allseen/LSF/Lamp"){
-	        	muzzley_lamplist_update_lampname(device_id_str, device_name_str);
-	    		muzzley_add_lighting_component(device_id_str, device_name_str);
-	        }
+            if(key=="/org/allseen/LSF/Lamp"){
+                muzzley_lamplist_update_lampname(device_id_str, device_name_str);
+                muzzley_add_lighting_component(device_id_str, device_name_str);
+            }
 
-	        if(key=="/org/allseen/LSF/ControllerService"){}
-	        if(key=="/ControlPanel/SmartPlug/rootContainer"){}
+            if(key=="/org/allseen/LSF/ControllerService"){}
+            if(key=="/ControlPanel/SmartPlug/rootContainer"){}
 
-	    }
+        }
  
         ControlPanelDevice* device = controlPanelController->createControllableDevice(busName, objectDescs);
-	    
-	    if(device==NULL){
-    		cout << "AnnounceHandler ControlPanelDevice not found" << endl << flush;
-    		return;
-    	}
+        
+        if(device==NULL){
+            cout << "AnnounceHandler ControlPanelDevice not found" << endl << flush;
+            return;
+        }
 
-	    std::cout << "AnnounceHandler session established with device: " << device->getDeviceBusName().c_str() << std::endl;
-	 	std::map<qcc::String, ControlPanelControllerUnit*> units = device->getDeviceUnits();
-	    std::map<qcc::String, ControlPanelControllerUnit*>::iterator iter;
-	    std::map<qcc::String, ControlPanel*>::iterator it;
+        std::cout << "AnnounceHandler session established with device: " << device->getDeviceBusName().c_str() << std::endl;
+         std::map<qcc::String, ControlPanelControllerUnit*> units = device->getDeviceUnits();
+        std::map<qcc::String, ControlPanelControllerUnit*>::iterator iter;
+        std::map<qcc::String, ControlPanel*>::iterator it;
 
-	    for (iter = units.begin(); iter != units.end(); iter++) {
-	        std::cout << endl << "AnnounceHandler parsing unit: " << iter->first.c_str() << std::endl;
-	        
-	        std::map<qcc::String, ControlPanel*> controlPanels = iter->second->getControlPanels();
-	        for (it = controlPanels.begin(); it != controlPanels.end(); it++) {
-	            std::cout << "AnnounceHandler parsing panelName: " << it->first.c_str() << std::endl;
-	            
-	            std::vector<qcc::String> languages = it->second->getLanguageSet().getLanguages();
-	            for (size_t i = 0; i < languages.size(); i++) {
-	                std::cout << "AnnounceHandler parsing language: " << languages[i].c_str() << std::endl;
-	                Container* rootContainer = it->second->getRootWidget(languages[i]);
-	                std::cout << "AnnounceHandler finished loading widget: " << rootContainer->getWidgetName().c_str() << std::endl;
-	            }
-	        }
-	    }
-		
+        for (iter = units.begin(); iter != units.end(); iter++) {
+            std::cout << endl << "AnnounceHandler parsing unit: " << iter->first.c_str() << std::endl;
+            
+            std::map<qcc::String, ControlPanel*> controlPanels = iter->second->getControlPanels();
+            for (it = controlPanels.begin(); it != controlPanels.end(); it++) {
+                std::cout << "AnnounceHandler parsing panelName: " << it->first.c_str() << std::endl;
+                
+                std::vector<qcc::String> languages = it->second->getLanguageSet().getLanguages();
+                for (size_t i = 0; i < languages.size(); i++) {
+                    std::cout << "AnnounceHandler parsing language: " << languages[i].c_str() << std::endl;
+                    Container* rootContainer = it->second->getRootWidget(languages[i]);
+                    std::cout << "AnnounceHandler finished loading widget: " << rootContainer->getWidgetName().c_str() << std::endl;
+                }
+            }
+        }
+        
 
-    	QStatus status = device->startSessionAsync();
-    	cout << "AnnounceHandler Session Status: " <<  QCC_StatusText(status) << endl << flush;
+        QStatus status = device->startSessionAsync();
+        cout << "AnnounceHandler Session Status: " <<  QCC_StatusText(status) << endl << flush;
 
-	    const qcc::String& cd_busname = device->getDeviceBusName();
-	   	cout << "AnnounceHandler ControlPanel Device BusName: " << cd_busname << endl << flush;
+        const qcc::String& cd_busname = device->getDeviceBusName();
+           cout << "AnnounceHandler ControlPanel Device BusName: " << cd_busname << endl << flush;
 
-	   	//const ajn::SessionId cd_sessionid = device->getSessionId();
-	   	//cout << "AnnounceHandler ControlPanel Device SessionId: " << cd_sessionid << endl << flush;
-	   	
-		//org/allseen/LSF/Lamp
-		//ControlPanel/SmartPlug/rootContainer
-		ControlPanelControllerUnit* cp_unit = device->getControlPanelUnit("ControlPanel/SmartPlug/rootContainer");
-		if(cp_unit==NULL){
-			cout << "AnnounceHandler SmartPlug not found" << endl << flush;
-			return;
-		}
+           //const ajn::SessionId cd_sessionid = device->getSessionId();
+           //cout << "AnnounceHandler ControlPanel Device SessionId: " << cd_sessionid << endl << flush;
+           
+        //org/allseen/LSF/Lamp
+        //ControlPanel/SmartPlug/rootContainer
+        ControlPanelControllerUnit* cp_unit = device->getControlPanelUnit("ControlPanel/SmartPlug/rootContainer");
+        if(cp_unit==NULL){
+            cout << "AnnounceHandler SmartPlug not found" << endl << flush;
+            return;
+        }
 
-		//ControlPanelSessionHandler cp_sessionHandler = ControlPanelSessionHandler(device);
-		//ajn::SessionId sessionid = cp_sessionHandler.getSessionId();
+        //ControlPanelSessionHandler cp_sessionHandler = ControlPanelSessionHandler(device);
+        //ajn::SessionId sessionid = cp_sessionHandler.getSessionId();
 
-		//ProxyBusObject pbus_obj = ProxyBusObject(**bus, "SmartPlug", "ControlPanel/SmartPlug/rootContainer", sessionid, false);
-		//IntrospectRemoteObjectAsync();
-		
-		muzzley_parse_plugs_controlpanelunit(device_id_str, device_name_str, cp_unit);
+        //ProxyBusObject pbus_obj = ProxyBusObject(**bus, "SmartPlug", "ControlPanel/SmartPlug/rootContainer", sessionid, false);
+        //IntrospectRemoteObjectAsync();
+        
+        muzzley_parse_plugs_controlpanelunit(device_id_str, device_name_str, cp_unit);
 
     }catch(exception& e){
-    	cout << "Exception: " << e.what() << endl << flush;
+        cout << "Exception: " << e.what() << endl << flush;
     }
     
 }
@@ -2866,27 +2866,27 @@ void cleanup() {
 
 
 int main(){
-	
-	if(muzzley_check_semaphore_file_exists(MUZZLEY_SEMAPHORE_FILENAME))
-		return true;
+    
+    if(muzzley_check_semaphore_file_exists(MUZZLEY_SEMAPHORE_FILENAME))
+        return true;
 
-	muzzley_write_semaphore_file();
+    muzzley_write_semaphore_file();
 
     // Adds listeners for SIGKILL, for gracefull stop
-	// It will be invoked when the user hits Ctrl-c
-	// For a list of allocated sempahores (and other shared resources), execute the 'ipcs' command on a tty
-	struct sigaction action;
-	action.sa_handler = semaphore_stop;
-	sigemptyset(&action.sa_mask);
-	action.sa_flags = 0;
-	sigaction(SIGTERM, &action, 0);
-	sigaction(SIGQUIT, &action, 0);
-	sigaction(SIGINT, &action, 0);
+    // It will be invoked when the user hits Ctrl-c
+    // For a list of allocated sempahores (and other shared resources), execute the 'ipcs' command on a tty
+    struct sigaction action;
+    action.sa_handler = semaphore_stop;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
+    sigaction(SIGTERM, &action, 0);
+    sigaction(SIGQUIT, &action, 0);
+    sigaction(SIGINT, &action, 0);
     
     //Muzzley Client
     muzzley::Client _muzzley_lighting_client;
    
-	//Initialize alljoyn bus ("ClientTest")
+    //Initialize alljoyn bus ("ClientTest")
     bus = new BusAttachment("MuzzleyConnector", true);
     QStatus bus_status = bus->Start();
     if (ER_OK != bus_status) {
@@ -2925,13 +2925,13 @@ int main(){
         cleanup();
         return 1;
     }
-	*/
+    */
 
     //Register for controlpanel announcements
     controlPanelService = ControlPanelService::getInstance();
     QCC_SetDebugLevel(logModules::CONTROLPANEL_MODULE_LOG_NAME, logModules::ALL_LOG_LEVELS);
-	
-	controlPanelController = new ControlPanelController();
+    
+    controlPanelController = new ControlPanelController();
     controlPanelListener = new ControlPanelListenerImpl(controlPanelController);
     bus_status = controlPanelService->initController(bus, controlPanelController, controlPanelListener);
     if (bus_status != ER_OK) {
@@ -2941,7 +2941,7 @@ int main(){
     }
 
     //Register for controlpanel notification announcements
-	announceHandler = new AnnounceHandlerImpl(NULL, announceHandlerCallback);
+    announceHandler = new AnnounceHandlerImpl(NULL, announceHandlerCallback);
     AnnouncementRegistrar::RegisterAnnounceHandler(*bus, *announceHandler, NULL, 0);
     conService = NotificationService::getInstance();
     controller_receiver = new ControllerNotificationReceiver(controlPanelController);
@@ -2974,8 +2974,8 @@ int main(){
             //_data->prettify(cout);
             //cout << endl << flush;
             try{
-            	muzzley::JSONObjT m = *_data;
-				muzzley_handle_lighting_request(lampManager, m);
+                muzzley::JSONObjT m = *_data;
+                muzzley_handle_lighting_request(lampManager, m);
             }catch(exception& e){
                 cout << "Exception: " << e.what() << endl << flush;
             }
@@ -2986,7 +2986,7 @@ int main(){
         return true;
     });
 
-	_muzzley_plugs_client.on(muzzley::AppLoggedIn,[] (muzzley::Message& _data, muzzley::Client& _muzzley_lighting_client) -> bool{
+    _muzzley_plugs_client.on(muzzley::AppLoggedIn,[] (muzzley::Message& _data, muzzley::Client& _muzzley_lighting_client) -> bool{
         cout << "Plugs logged in with id " << _data["d"]["activityId"] << endl << flush;
        
         muzzley::Subscription _s1;
@@ -3000,8 +3000,8 @@ int main(){
             //_data->prettify(cout);
             //cout << endl << flush;
             try{
-            	muzzley::JSONObjT m = *_data;
-            	muzzley_handle_plug_request(m);
+                muzzley::JSONObjT m = *_data;
+                muzzley_handle_plug_request(m);
             }catch(exception& e){
                 cout << "Exception: " << e.what() << endl << flush;
             }
@@ -3014,21 +3014,21 @@ int main(){
     try{
         // Waits for global manager lighting devicekey
         while(!muzzley_lighting_registered){
-			muzzley_lighting_connect_API();
-	        muzzley_lighting_registered=muzzley_lighting_connect_manager();
-        	printf("Waiting for Muzzley lighting registration...\n");
-        	sleep(1);
+            muzzley_lighting_connect_API();
+            muzzley_lighting_registered=muzzley_lighting_connect_manager();
+            printf("Waiting for Muzzley lighting registration...\n");
+            sleep(1);
         }
 
         // Waits for global manager plugs devicekey
         while(!muzzley_lighting_registered || !muzzley_plugs_registered){
-        	muzzley_plugs_connect_API();
-        	muzzley_plugs_registered=muzzley_plugs_connect_manager();     
-        	printf("Waiting for Muzzley plugs registration...\n");
-        	sleep(1);
+            muzzley_plugs_connect_API();
+            muzzley_plugs_registered=muzzley_plugs_connect_manager();     
+            printf("Waiting for Muzzley plugs registration...\n");
+            sleep(1);
         }
 
-    	//Connects the application to the Muzzley server.
+        //Connects the application to the Muzzley server.
         _muzzley_lighting_client.initApp(MUZZLEY_LIGHTING_APP_TOKEN);
         cout << "Muzzley lighting started!" << endl << flush;
 
@@ -3039,106 +3039,106 @@ int main(){
         //Get All Available LampsIDs for upnp server
         status = lampManager.GetAllLampIDs();
         sleep(1);
-		
-		muzzley_query_unknown_lampnames(&lampManager);
-	
-		//UPnP
-   		GMainLoop *main_loop; 
-		GError *error = NULL;
-		GUPnPContext *gupnp_lighting_context;
-		GUPnPRootDevice *gupnp_lighting_dev;
-	    GSSDPResourceGroup *gupnp_lighting_resource_group;
-	    
-	    GUPnPContext *gupnp_plugs_context;
-		GUPnPRootDevice *gupnp_plugs_dev;
-	    GSSDPResourceGroup *gupnp_plugs_resource_group;
+        
+        muzzley_query_unknown_lampnames(&lampManager);
+    
+        //UPnP
+           GMainLoop *main_loop; 
+        GError *error = NULL;
+        GUPnPContext *gupnp_lighting_context;
+        GUPnPRootDevice *gupnp_lighting_dev;
+        GSSDPResourceGroup *gupnp_lighting_resource_group;
+        
+        GUPnPContext *gupnp_plugs_context;
+        GUPnPRootDevice *gupnp_plugs_dev;
+        GSSDPResourceGroup *gupnp_plugs_resource_group;
 
 
-		#if !GLIB_CHECK_VERSION(2,35,0)
-		  g_type_init ();
-		#endif
-	  
-	    //Lighting UPnP
-		gupnp_lighting_context = gupnp_context_new (NULL, NULL, 0, &error);
-		if (error) {
-			g_printerr ("Error creating the GUPnP lighting context: %s\n", error->message);
-			g_error_free (error);
-			return EXIT_FAILURE;
-		}
-		
-		muzzley_query_unknown_lampnames(&lampManager);
-		gupnp_generate_lighting_XML();
+        #if !GLIB_CHECK_VERSION(2,35,0)
+          g_type_init ();
+        #endif
+      
+        //Lighting UPnP
+        gupnp_lighting_context = gupnp_context_new (NULL, NULL, 0, &error);
+        if (error) {
+            g_printerr ("Error creating the GUPnP lighting context: %s\n", error->message);
+            g_error_free (error);
+            return EXIT_FAILURE;
+        }
+        
+        muzzley_query_unknown_lampnames(&lampManager);
+        gupnp_generate_lighting_XML();
 
-		gupnp_lighting_dev = gupnp_root_device_new (gupnp_lighting_context, MUZZLEY_LIGHTING_XML_FILENAME, ".");
-		gupnp_root_device_set_available (gupnp_lighting_dev, TRUE);
-		gupnp_lighting_resource_group = gupnp_root_device_get_ssdp_resource_group(gupnp_lighting_dev);
-		gssdp_resource_group_set_max_age (gupnp_lighting_resource_group, GUPNP_MAX_AGE);
-		gssdp_resource_group_set_message_delay(gupnp_lighting_resource_group, GUPNP_MESSAGE_DELAY);
+        gupnp_lighting_dev = gupnp_root_device_new (gupnp_lighting_context, MUZZLEY_LIGHTING_XML_FILENAME, ".");
+        gupnp_root_device_set_available (gupnp_lighting_dev, TRUE);
+        gupnp_lighting_resource_group = gupnp_root_device_get_ssdp_resource_group(gupnp_lighting_dev);
+        gssdp_resource_group_set_max_age (gupnp_lighting_resource_group, GUPNP_MAX_AGE);
+        gssdp_resource_group_set_message_delay(gupnp_lighting_resource_group, GUPNP_MESSAGE_DELAY);
 
-	    std::stringstream lighting_device_urn;
-	    lighting_device_urn << "urn:Muzzley:device:" << MUZZLEY_LIGHTING_PROFILEID << ":1";
-	    const std::string tmp_lighting_urn = lighting_device_urn.str();
-		const char* lighting_device_urn_char = tmp_lighting_urn.c_str();    
-	   
-	    std::stringstream lighting_host;
-		lighting_host << "http://" << gupnp_context_get_host_ip (gupnp_lighting_context) << ":" << gupnp_context_get_port (gupnp_lighting_context) << "/" << gupnp_root_device_get_relative_location(gupnp_lighting_dev);
-		const char* lighting_host_char = lighting_host.str().c_str(); 
+        std::stringstream lighting_device_urn;
+        lighting_device_urn << "urn:Muzzley:device:" << MUZZLEY_LIGHTING_PROFILEID << ":1";
+        const std::string tmp_lighting_urn = lighting_device_urn.str();
+        const char* lighting_device_urn_char = tmp_lighting_urn.c_str();    
+       
+        std::stringstream lighting_host;
+        lighting_host << "http://" << gupnp_context_get_host_ip (gupnp_lighting_context) << ":" << gupnp_context_get_port (gupnp_lighting_context) << "/" << gupnp_root_device_get_relative_location(gupnp_lighting_dev);
+        const char* lighting_host_char = lighting_host.str().c_str(); 
 
-		cout << endl << "GUPNP LIGHTING INFO:" << endl << flush;
-		cout << "URN: " << lighting_device_urn_char << endl << flush;
-		cout << "HOST: " << lighting_host_char << endl << flush;
-		cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_lighting_dev) << endl << flush;
-		cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_lighting_dev) << endl << flush;
-		cout << "PORT: " << gupnp_context_get_port (gupnp_lighting_context) << endl << flush;
+        cout << endl << "GUPNP LIGHTING INFO:" << endl << flush;
+        cout << "URN: " << lighting_device_urn_char << endl << flush;
+        cout << "HOST: " << lighting_host_char << endl << flush;
+        cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_lighting_dev) << endl << flush;
+        cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_lighting_dev) << endl << flush;
+        cout << "PORT: " << gupnp_context_get_port (gupnp_lighting_context) << endl << flush;
 
-		gssdp_resource_group_add_resource_simple(gupnp_lighting_resource_group, lighting_device_urn_char, lighting_device_urn_char , lighting_host_char ); 	  	  //urn:urn
-		gssdp_resource_group_set_available (gupnp_lighting_resource_group, TRUE);
+        gssdp_resource_group_add_resource_simple(gupnp_lighting_resource_group, lighting_device_urn_char, lighting_device_urn_char , lighting_host_char );             //urn:urn
+        gssdp_resource_group_set_available (gupnp_lighting_resource_group, TRUE);
 
-		//Plugs UPnP
-		gupnp_plugs_context = gupnp_context_new (NULL, NULL, 0, &error);
-		if (error) {
-			g_printerr ("Error creating the GUPnP plugs context: %s\n", error->message);
-			g_error_free (error);
-			return EXIT_FAILURE;
-		}
+        //Plugs UPnP
+        gupnp_plugs_context = gupnp_context_new (NULL, NULL, 0, &error);
+        if (error) {
+            g_printerr ("Error creating the GUPnP plugs context: %s\n", error->message);
+            g_error_free (error);
+            return EXIT_FAILURE;
+        }
 
-		gupnp_generate_plugs_XML();
+        gupnp_generate_plugs_XML();
 
-		gupnp_plugs_dev = gupnp_root_device_new (gupnp_plugs_context, MUZZLEY_PLUGS_XML_FILENAME, ".");
-		gupnp_root_device_set_available (gupnp_plugs_dev, TRUE);
-		gupnp_plugs_resource_group = gupnp_root_device_get_ssdp_resource_group(gupnp_plugs_dev);
-		gssdp_resource_group_set_max_age (gupnp_plugs_resource_group, GUPNP_MAX_AGE);
-		gssdp_resource_group_set_message_delay(gupnp_plugs_resource_group, GUPNP_MESSAGE_DELAY);
+        gupnp_plugs_dev = gupnp_root_device_new (gupnp_plugs_context, MUZZLEY_PLUGS_XML_FILENAME, ".");
+        gupnp_root_device_set_available (gupnp_plugs_dev, TRUE);
+        gupnp_plugs_resource_group = gupnp_root_device_get_ssdp_resource_group(gupnp_plugs_dev);
+        gssdp_resource_group_set_max_age (gupnp_plugs_resource_group, GUPNP_MAX_AGE);
+        gssdp_resource_group_set_message_delay(gupnp_plugs_resource_group, GUPNP_MESSAGE_DELAY);
 
-	    std::stringstream plugs_device_urn;
-	    plugs_device_urn << "urn:Muzzley:device:" << MUZZLEY_PLUGS_PROFILEID << ":1";
-	    const std::string tmp_plugs_urn = plugs_device_urn.str();
-		const char* plugs_device_urn_char = tmp_plugs_urn.c_str();    
-	   
-	    std::stringstream plugs_host;
-		plugs_host << "http://" << gupnp_context_get_host_ip (gupnp_plugs_context) << ":" << gupnp_context_get_port (gupnp_plugs_context) << "/" << gupnp_root_device_get_relative_location(gupnp_plugs_dev);
-		const char* plugs_host_char = plugs_host.str().c_str(); 
+        std::stringstream plugs_device_urn;
+        plugs_device_urn << "urn:Muzzley:device:" << MUZZLEY_PLUGS_PROFILEID << ":1";
+        const std::string tmp_plugs_urn = plugs_device_urn.str();
+        const char* plugs_device_urn_char = tmp_plugs_urn.c_str();    
+       
+        std::stringstream plugs_host;
+        plugs_host << "http://" << gupnp_context_get_host_ip (gupnp_plugs_context) << ":" << gupnp_context_get_port (gupnp_plugs_context) << "/" << gupnp_root_device_get_relative_location(gupnp_plugs_dev);
+        const char* plugs_host_char = plugs_host.str().c_str(); 
 
-		cout << endl << "GUPNP PLUGS INFO:" << endl << flush;
-		cout << "URN: " << plugs_device_urn_char << endl << flush;
-		cout << "HOST: " << plugs_host_char << endl << flush;
-		cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_plugs_dev) << endl << flush;
-		cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_plugs_dev) << endl << flush;
-		cout << "PORT: " << gupnp_context_get_port (gupnp_plugs_context) << endl << endl << flush;
+        cout << endl << "GUPNP PLUGS INFO:" << endl << flush;
+        cout << "URN: " << plugs_device_urn_char << endl << flush;
+        cout << "HOST: " << plugs_host_char << endl << flush;
+        cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_plugs_dev) << endl << flush;
+        cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_plugs_dev) << endl << flush;
+        cout << "PORT: " << gupnp_context_get_port (gupnp_plugs_context) << endl << endl << flush;
 
-		gssdp_resource_group_add_resource_simple(gupnp_plugs_resource_group, plugs_device_urn_char, plugs_device_urn_char , plugs_host_char ); 	  	  //urn:urn
-		gssdp_resource_group_set_available (gupnp_plugs_resource_group, TRUE);
+        gssdp_resource_group_add_resource_simple(gupnp_plugs_resource_group, plugs_device_urn_char, plugs_device_urn_char , plugs_host_char );             //urn:urn
+        gssdp_resource_group_set_available (gupnp_plugs_resource_group, TRUE);
 
-		// Run the main loop
-	    main_loop = g_main_loop_new (NULL, FALSE);
-	    g_main_loop_run (main_loop);
-	  	
-	    
-	    cleanup();
+        // Run the main loop
+        main_loop = g_main_loop_new (NULL, FALSE);
+        g_main_loop_run (main_loop);
+          
+        
+        cleanup();
 
     }catch(exception& e){
-    	cout << "Error: " << e.what() << endl << flush;
-    	return true;
+        cout << "Error: " << e.what() << endl << flush;
+        return true;
     }
 
     return false;
