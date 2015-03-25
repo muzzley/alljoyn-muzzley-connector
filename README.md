@@ -296,4 +296,18 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 
 > $ scp alljoyn_muzzley_connector root@192.168.1.1:/bin
 
-21) Run it. (For the Lighting Controller Service use the Luminaire App for Android)
+21) Run it.
+
+> 1 - The Alljoyn Daemon should be running (in only one machine) on local network.
+
+> 2 - Start the Alljoyn-Muzzley-Connector. (If it does not start, delete the “muzzley_semaphore.txt” file, on the same folder.)
+
+> 3 - Open the Muzzley app on the phone and add the channel using the “+”. (Remove it first, if the channel has been already added before. To avoid the “error:417”, the channel must be added on the phone trying to add new components.)
+
+> 4 - Open the Luminaire App on one Android phone connected to the same network, and enable the controller service. (The Muzzley app must be run on a different phone.)
+
+> 5 - Now the Alljoyn plugs or lights can be connected to power. (They will announce themselves on the local network and the Muzzley connector will send that info to the Muzzley cloud.)
+
+> 6 - Check if the lights can be controlled using the "LSF Sample App", and the plugs or with with the "Alljoyn On" application.
+
+> 7 - Open the Muzzley application on the phone and start to interact with your devices.
