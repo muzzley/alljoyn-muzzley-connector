@@ -3091,8 +3091,6 @@ int main(){
         cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_lighting_dev) << endl << flush;
         cout << "PORT: " << gupnp_context_get_port (gupnp_lighting_context) << endl << flush;
 
-        gssdp_resource_group_add_resource_simple(gupnp_lighting_resource_group, lighting_device_urn_char, lighting_device_urn_char , lighting_host_char );             //urn:urn
-        gssdp_resource_group_set_available (gupnp_lighting_resource_group, TRUE);
 
         //Plugs UPnP
         gupnp_plugs_context = gupnp_context_new (NULL, NULL, 0, &error);
@@ -3126,8 +3124,10 @@ int main(){
         cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_plugs_dev) << endl << flush;
         cout << "PORT: " << gupnp_context_get_port (gupnp_plugs_context) << endl << endl << flush;
 
-        gssdp_resource_group_add_resource_simple(gupnp_plugs_resource_group, plugs_device_urn_char, plugs_device_urn_char , plugs_host_char );             //urn:urn
-        gssdp_resource_group_set_available (gupnp_plugs_resource_group, TRUE);
+        //gssdp_resource_group_add_resource_simple(gupnp_lighting_resource_group, lighting_device_urn_char, lighting_device_urn_char , lighting_host_char );
+        //gssdp_resource_group_add_resource_simple(gupnp_plugs_resource_group, plugs_device_urn_char, plugs_device_urn_char , plugs_host_char );
+        //gssdp_resource_group_set_available (gupnp_lighting_resource_group, TRUE);
+        //gssdp_resource_group_set_available (gupnp_plugs_resource_group, TRUE);
 
         // Run the main loop
         main_loop = g_main_loop_new (NULL, FALSE);
