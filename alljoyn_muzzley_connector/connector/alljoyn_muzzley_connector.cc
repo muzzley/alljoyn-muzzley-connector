@@ -66,6 +66,10 @@
 #include <ctime>
 #include <chrono>
 
+//Thread
+#include <iostream>
+#include <thread>
+
 //Alljoyn Services
 #include <CommonSampleUtil.h>
 #include <AnnounceHandlerImpl.h>
@@ -91,9 +95,6 @@
 #include <alljoyn/controlpanel/Dialog.h>
 #include <alljoyn/controlpanel/Action.h>
 
-//14.12
-//#include <alljoyn/ProxyBusObject.h>
-//#include <ProxyBusObject.h>
 
 //#define MUZZLEY_STAGING
 
@@ -166,7 +167,7 @@
 #define MUZZLEY_PLUGS_UDN "muzzley-plugs-udn"
 #define MUZZLEY_SERIALNUMBER_LIGHTING "muzzley-lighting-serialnumber-lisbon-office-1"
 #define MUZZLEY_SERIALNUMBER_PLUGS "muzzley-plugs-serialnumber-lisbon-office-1"
-
+#define MUZZLEY_LAMPLIST_INTERVAL 30
 
 using namespace std;
 #if !defined __APPLE__
@@ -325,10 +326,10 @@ void RGBtoHSV( double r, double g, double b, double *h, double *s, double *v )
     max = std::max(r, g);
     max = std::max(max, b);
 
-    *v = max;                    // v
+    *v = max;                   // v
     delta = max - min;
     if( max != 0 )
-        *s = delta / max;        // s
+        *s = delta / max;       // s
     else {
         // r = g = b = 0        // s = 0, v is undefined
         *s = 0;
@@ -572,12 +573,12 @@ int get_request_vector_pos(string component, string property){
         for (unsigned int i = 0; i < req_vec.size(); i++){
             if(get<0>(req_vec[i])==component){
                 if(get<1>(req_vec[i])==property){
-                    cout << "Muzzley request found on pos: " << i << endl << flush; 
+                    cout << "Muzzley pending request found on pos#: " << i << endl << flush; 
                     return i;
                 }
             }
         }
-        cout << "Muzzley request not found" << endl << flush; 
+        cout << "Muzzley pending request not found" << endl << flush; 
         return -1;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -634,41 +635,52 @@ bool muzzley_query_unknown_lampnames(LampManager* lampManager){
                 status = lampManager->GetLampName(local_it->first);
                 if (status == LSF_ERR_FAILURE){
                     return false;
-                  }
-             }
-          }
+                }
+            }
+        }
     }
     return true;
 }
 
+
 bool muzzley_lamplist_update_lampname(string lampID, string lampName){
     for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
         for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
-            if(local_it->first ==  lampID){
+            if(local_it->first == lampID){
                 cout << endl << "Updating lamp name for id: " << local_it->first << endl << flush;
                 local_it->second=lampName;
                 return true;
             }
         }
     }
-    return false;
+    muzzley_lamplist[lampID] = lampName;
+    cout << endl << "Added new lamp info for id: " << lampID << endl << flush;
+    return true;
 }
 
 string muzzley_lamplist_get_lampname(string lampID){
     for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
         for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
-            if(local_it->first == lampID){
-                cout << endl << "Found lamp id: " << local_it->first << endl << flush;
-                if(local_it->second != MUZZLEY_UNKNOWN_NAME && local_it->second != ""){
-                    cout << endl << "lampname: " << local_it->second << endl << flush;
+            if(local_it->first == lampID.data()){
+                cout << endl << "Found lamp:" << endl << flush;
+                if(local_it->second != MUZZLEY_UNKNOWN_NAME){
+                    cout << "id: " << local_it->first << " Name: " << local_it->second << endl << flush;
                     return local_it->second;
                 }
-                else
-                    return MUZZLEY_UNKNOWN_NAME;
             }
         }
     }
     return MUZZLEY_UNKNOWN_NAME;
+}
+
+void muzzley_lamplist_print(){
+	cout << endl << "Lamplist: " << endl << flush;
+    for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+        for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
+            cout << "id: " << local_it->first << " Name: " << local_it->second << endl << flush;
+        }
+    }
+    cout << "---END---" << endl << endl << flush;
 }
 
 void gupnp_generate_lighting_XML(){
@@ -826,7 +838,7 @@ bool muzzley_lighting_connect_manager(){
 
     _req->body(_str_body_part);
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
@@ -914,7 +926,7 @@ bool muzzley_replace_lighting_components(){
 
     _req->body(_str_replace_components);
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
@@ -976,7 +988,7 @@ bool muzzley_add_lighting_component(LSFString lampID, LSFString lampName){
 
     _req->body(_str_add_component);
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl <<_req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
@@ -1042,7 +1054,7 @@ bool muzzley_add_lighting_components(LSFStringList new_lampIDs){
 
     _req->body(_str_add_components);
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
@@ -1105,7 +1117,7 @@ bool muzzley_remove_lighting_components(LSFStringList del_lampIDs){
 
     _req->body(_str_del_components);
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
@@ -1674,7 +1686,7 @@ bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blu
                     "g" << green <<
                     "b" << blue
                       ) <<
-                  "profile" << MUZZLEY_LIGHTING_PROFILEID <<
+                "profile" << MUZZLEY_LIGHTING_PROFILEID <<
                 "channel" << muzzley_lighting_deviceKey <<
                 "component" << lampID <<
                 "property" << PROPERTY_COLOR <<
@@ -2338,7 +2350,6 @@ bool muzzley_handle_plug_request(muzzley::JSONObjT _data){
 }
 
 
-
 //LightingSDK
 class ControllerClientCallbackHandler : public ControllerClientCallback {
   public:
@@ -2383,7 +2394,6 @@ class ControllerClientCallbackHandler : public ControllerClientCallback {
 
 class ControllerServiceManagerCallbackHandler : public ControllerServiceManagerCallback {
 
-
     void ControllerServiceLightingResetCB(void) {
         printf("\n%s\n", __func__);
     }
@@ -2411,7 +2421,7 @@ public:
     void GetAllLampIDsReplyCB(const LSFResponseCode& responseCode, const LSFStringList& lampIDs) {
         printf("\n%s():\nresponseCode = %s\nlistsize=%lu", __func__, LSFResponseCodeText(responseCode), lampIDs.size());
         if (responseCode == LSF_OK) {
-            muzzley_lamplist.clear();
+            //muzzley_lamplist.clear();
             LSFStringList::const_iterator it = lampIDs.begin();
             uint8_t count = 1;
             for (; it != lampIDs.end(); ++it) {
@@ -2435,7 +2445,7 @@ public:
                 for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
                     if(local_it->first == lampID.data() ){
                         local_it->second = lampName.data();
-                        cout << endl << "Lamp ID: " << lampID << endl << "Name: " << lampName << endl << "was updated in lamplist" << endl << endl << flush; 
+                        cout << endl << "Lamp ID: " << lampID << endl << "Name: " << lampName << " was updated in lamplist" << endl << endl << flush; 
                       }
                 }      
             }
@@ -2567,8 +2577,6 @@ void muzzley_parse_plugs_controlpanelunit(string device_id_str, string device_na
                 cout << "AnnounceHandler RootContainer not found!" << endl << flush;
             }else{
                 cout << "AnnounceHandler RootContainer found!" << endl << flush;
-                
-                //CONTAINER==0
                 if (rootContainer->getWidgetType() == 0) {
                     std::vector<Widget*> childWidgets = rootContainer->getChildWidgets();
                     cout << "AnnounceHandler Print ChildWidgets from rootContainer" << endl << endl << flush;
@@ -2606,7 +2614,7 @@ void muzzley_parse_plugs_controlpanelunit(string device_id_str, string device_na
                                     for (size_t j = 0; j < childchildWidgets.size(); j++) {
                                         widgetType = childchildWidgets[j]->getWidgetType();
                                         name = childchildWidgets[j]->getWidgetName();
-                                         secured = childchildWidgets[j]->getIsSecured();
+                                        secured = childchildWidgets[j]->getIsSecured();
                                         enabled = childchildWidgets[j]->getIsEnabled();
                                         writable = childchildWidgets[j]->getIsWritable();
 
@@ -2692,8 +2700,7 @@ void muzzley_parse_plugs_controlpanelunit(string device_id_str, string device_na
                     }
                     
                 }
-                
-                //DIALOG==1?
+
                 else if (rootContainer->getWidgetType() == 1) {
                     cout << "AnnounceHandler Widget type->DIALOG" << endl;
                 } else {
@@ -2704,8 +2711,6 @@ void muzzley_parse_plugs_controlpanelunit(string device_id_str, string device_na
             }
         }
 
-    //Working...
-    //plug_vec.push_back(make_tuple(device_id_str, device_name_str, plug_property_status, plug_property_volt, plug_property_curr, plug_property_freq, plug_property_watt , plug_property_accu, plug_action_get_properties, plug_action_on, plug_action_off));
     del_plug_vector_pos(device_id_str);
     add_plug_vector_pos(device_id_str, device_name_str, plug_property_status, plug_property_volt, plug_property_curr, plug_property_freq, plug_property_watt , plug_property_accu, plug_action_get_properties, plug_action_on, plug_action_off);
     muzzley_add_plugs_component(device_id_str, device_name_str);
@@ -2774,6 +2779,7 @@ static void announceHandlerCallback(qcc::String const& busName, unsigned short v
             std::vector<qcc::String> vector = it->second;
 
             if(key=="/org/allseen/LSF/Lamp"){
+            	gupnp_generate_lighting_XML();
                 muzzley_lamplist_update_lampname(device_id_str, device_name_str);
                 muzzley_add_lighting_component(device_id_str, device_name_str);
             }
@@ -2791,7 +2797,7 @@ static void announceHandlerCallback(qcc::String const& busName, unsigned short v
         }
 
         std::cout << "AnnounceHandler session established with device: " << device->getDeviceBusName().c_str() << std::endl;
-         std::map<qcc::String, ControlPanelControllerUnit*> units = device->getDeviceUnits();
+        std::map<qcc::String, ControlPanelControllerUnit*> units = device->getDeviceUnits();
         std::map<qcc::String, ControlPanelControllerUnit*>::iterator iter;
         std::map<qcc::String, ControlPanel*>::iterator it;
 
@@ -2817,7 +2823,6 @@ static void announceHandlerCallback(qcc::String const& busName, unsigned short v
 
         const qcc::String& cd_busname = device->getDeviceBusName();
            cout << "AnnounceHandler ControlPanel Device BusName: " << cd_busname << endl << flush;
-
            //const ajn::SessionId cd_sessionid = device->getSessionId();
            //cout << "AnnounceHandler ControlPanel Device SessionId: " << cd_sessionid << endl << flush;
            
@@ -2865,11 +2870,107 @@ void cleanup() {
 }
 
 
+void upnp_advertise(){
+
+    GMainLoop *main_loop; 
+    GError *error = NULL;
+    GUPnPContext *gupnp_lighting_context;
+    GUPnPRootDevice *gupnp_lighting_dev;
+    GSSDPResourceGroup *gupnp_lighting_resource_group;
+    
+    GUPnPContext *gupnp_plugs_context;
+    GUPnPRootDevice *gupnp_plugs_dev;
+    GSSDPResourceGroup *gupnp_plugs_resource_group;
+
+
+    #if !GLIB_CHECK_VERSION(2,35,0)
+      g_type_init ();
+    #endif
+  
+    //Lighting UPnP
+    gupnp_lighting_context = gupnp_context_new (NULL, NULL, 0, &error);
+    if (error) {
+        g_printerr ("Error creating the GUPnP lighting context: %s\n", error->message);
+        g_error_free (error);
+        return EXIT_FAILURE;
+    }
+    
+    gupnp_generate_lighting_XML();
+
+    gupnp_lighting_dev = gupnp_root_device_new (gupnp_lighting_context, MUZZLEY_LIGHTING_XML_FILENAME, ".");
+    gupnp_root_device_set_available (gupnp_lighting_dev, TRUE);
+    gupnp_lighting_resource_group = gupnp_root_device_get_ssdp_resource_group(gupnp_lighting_dev);
+    gssdp_resource_group_set_max_age (gupnp_lighting_resource_group, GUPNP_MAX_AGE);
+    gssdp_resource_group_set_message_delay(gupnp_lighting_resource_group, GUPNP_MESSAGE_DELAY);
+
+    std::stringstream lighting_device_urn;
+    lighting_device_urn << "urn:Muzzley:device:" << MUZZLEY_LIGHTING_PROFILEID << ":1";
+    const std::string tmp_lighting_urn = lighting_device_urn.str();
+    const char* lighting_device_urn_char = tmp_lighting_urn.c_str();    
+   
+    std::stringstream lighting_host;
+    lighting_host << "http://" << gupnp_context_get_host_ip (gupnp_lighting_context) << ":" << gupnp_context_get_port (gupnp_lighting_context) << "/" << gupnp_root_device_get_relative_location(gupnp_lighting_dev);
+    const char* lighting_host_char = lighting_host.str().c_str(); 
+
+    cout << endl << "GUPNP LIGHTING INFO:" << endl << flush;
+    cout << "URN: " << lighting_device_urn_char << endl << flush;
+    cout << "HOST: " << lighting_host_char << endl << flush;
+    cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_lighting_dev) << endl << flush;
+    cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_lighting_dev) << endl << flush;
+    cout << "PORT: " << gupnp_context_get_port (gupnp_lighting_context) << endl << flush;
+
+
+    //Plugs UPnP
+    gupnp_plugs_context = gupnp_context_new (NULL, NULL, 0, &error);
+    if (error) {
+        g_printerr ("Error creating the GUPnP plugs context: %s\n", error->message);
+        g_error_free (error);
+        return EXIT_FAILURE;
+    }
+
+    gupnp_generate_plugs_XML();
+
+    gupnp_plugs_dev = gupnp_root_device_new (gupnp_plugs_context, MUZZLEY_PLUGS_XML_FILENAME, ".");
+    gupnp_root_device_set_available (gupnp_plugs_dev, TRUE);
+    gupnp_plugs_resource_group = gupnp_root_device_get_ssdp_resource_group(gupnp_plugs_dev);
+    gssdp_resource_group_set_max_age (gupnp_plugs_resource_group, GUPNP_MAX_AGE);
+    gssdp_resource_group_set_message_delay(gupnp_plugs_resource_group, GUPNP_MESSAGE_DELAY);
+
+    std::stringstream plugs_device_urn;
+    plugs_device_urn << "urn:Muzzley:device:" << MUZZLEY_PLUGS_PROFILEID << ":1";
+    const std::string tmp_plugs_urn = plugs_device_urn.str();
+    const char* plugs_device_urn_char = tmp_plugs_urn.c_str();    
+   
+    std::stringstream plugs_host;
+    plugs_host << "http://" << gupnp_context_get_host_ip (gupnp_plugs_context) << ":" << gupnp_context_get_port (gupnp_plugs_context) << "/" << gupnp_root_device_get_relative_location(gupnp_plugs_dev);
+    const char* plugs_host_char = plugs_host.str().c_str(); 
+
+    cout << endl << "GUPNP PLUGS INFO:" << endl << flush;
+    cout << "URN: " << plugs_device_urn_char << endl << flush;
+    cout << "HOST: " << plugs_host_char << endl << flush;
+    cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_plugs_dev) << endl << flush;
+    cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_plugs_dev) << endl << flush;
+    cout << "PORT: " << gupnp_context_get_port (gupnp_plugs_context) << endl << endl << flush;
+
+    //gssdp_resource_group_add_resource_simple(gupnp_lighting_resource_group, lighting_device_urn_char, lighting_device_urn_char , lighting_host_char );
+    //gssdp_resource_group_add_resource_simple(gupnp_plugs_resource_group, plugs_device_urn_char, plugs_device_urn_char , plugs_host_char );
+    //gssdp_resource_group_set_available (gupnp_lighting_resource_group, TRUE);
+    //gssdp_resource_group_set_available (gupnp_plugs_resource_group, TRUE);
+
+    //Run the main loop
+    main_loop = g_main_loop_new (NULL, FALSE);
+    g_main_loop_run (main_loop);
+}
+
+void lamplist_info(){
+	while(true){
+		muzzley_lamplist_print();
+		sleep(MUZZLEY_LAMPLIST_INTERVAL);
+	}
+}
+
 int main(){
     
-    if(muzzley_check_semaphore_file_exists(MUZZLEY_SEMAPHORE_FILENAME))
-        return true;
-
     muzzley_write_semaphore_file();
 
     // Adds listeners for SIGKILL, for gracefull stop
@@ -2885,7 +2986,7 @@ int main(){
     
     //Muzzley Client
     muzzley::Client _muzzley_lighting_client;
-   
+
     //Initialize alljoyn bus ("ClientTest")
     bus = new BusAttachment("MuzzleyConnector", true);
     QStatus bus_status = bus->Start();
@@ -3036,104 +3137,20 @@ int main(){
         _muzzley_plugs_client.initApp(MUZZLEY_PLUGS_APP_TOKEN);
         cout << "Muzzley plugs started!" << endl << flush;
 
-        //Get All Available LampsIDs for upnp server
+        //Starts the UPNP advertisement
+    	std::thread upnp_thread(upnp_advertise);
+    	upnp_thread.detach();
+
+    	//Lists all alljoyn lamps periodically
+    	std::thread lamplist_thread(lamplist_info);
+    	lamplist_thread.detach();
+
+        //Get all Available LampsIDs for upnp server
         status = lampManager.GetAllLampIDs();
-        sleep(1);
-        
         muzzley_query_unknown_lampnames(&lampManager);
-    
-        //UPnP
-           GMainLoop *main_loop; 
-        GError *error = NULL;
-        GUPnPContext *gupnp_lighting_context;
-        GUPnPRootDevice *gupnp_lighting_dev;
-        GSSDPResourceGroup *gupnp_lighting_resource_group;
-        
-        GUPnPContext *gupnp_plugs_context;
-        GUPnPRootDevice *gupnp_plugs_dev;
-        GSSDPResourceGroup *gupnp_plugs_resource_group;
-
-
-        #if !GLIB_CHECK_VERSION(2,35,0)
-          g_type_init ();
-        #endif
-      
-        //Lighting UPnP
-        gupnp_lighting_context = gupnp_context_new (NULL, NULL, 0, &error);
-        if (error) {
-            g_printerr ("Error creating the GUPnP lighting context: %s\n", error->message);
-            g_error_free (error);
-            return EXIT_FAILURE;
-        }
-        
-        muzzley_query_unknown_lampnames(&lampManager);
-        gupnp_generate_lighting_XML();
-
-        gupnp_lighting_dev = gupnp_root_device_new (gupnp_lighting_context, MUZZLEY_LIGHTING_XML_FILENAME, ".");
-        gupnp_root_device_set_available (gupnp_lighting_dev, TRUE);
-        gupnp_lighting_resource_group = gupnp_root_device_get_ssdp_resource_group(gupnp_lighting_dev);
-        gssdp_resource_group_set_max_age (gupnp_lighting_resource_group, GUPNP_MAX_AGE);
-        gssdp_resource_group_set_message_delay(gupnp_lighting_resource_group, GUPNP_MESSAGE_DELAY);
-
-        std::stringstream lighting_device_urn;
-        lighting_device_urn << "urn:Muzzley:device:" << MUZZLEY_LIGHTING_PROFILEID << ":1";
-        const std::string tmp_lighting_urn = lighting_device_urn.str();
-        const char* lighting_device_urn_char = tmp_lighting_urn.c_str();    
-       
-        std::stringstream lighting_host;
-        lighting_host << "http://" << gupnp_context_get_host_ip (gupnp_lighting_context) << ":" << gupnp_context_get_port (gupnp_lighting_context) << "/" << gupnp_root_device_get_relative_location(gupnp_lighting_dev);
-        const char* lighting_host_char = lighting_host.str().c_str(); 
-
-        cout << endl << "GUPNP LIGHTING INFO:" << endl << flush;
-        cout << "URN: " << lighting_device_urn_char << endl << flush;
-        cout << "HOST: " << lighting_host_char << endl << flush;
-        cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_lighting_dev) << endl << flush;
-        cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_lighting_dev) << endl << flush;
-        cout << "PORT: " << gupnp_context_get_port (gupnp_lighting_context) << endl << flush;
-
-
-        //Plugs UPnP
-        gupnp_plugs_context = gupnp_context_new (NULL, NULL, 0, &error);
-        if (error) {
-            g_printerr ("Error creating the GUPnP plugs context: %s\n", error->message);
-            g_error_free (error);
-            return EXIT_FAILURE;
-        }
-
-        gupnp_generate_plugs_XML();
-
-        gupnp_plugs_dev = gupnp_root_device_new (gupnp_plugs_context, MUZZLEY_PLUGS_XML_FILENAME, ".");
-        gupnp_root_device_set_available (gupnp_plugs_dev, TRUE);
-        gupnp_plugs_resource_group = gupnp_root_device_get_ssdp_resource_group(gupnp_plugs_dev);
-        gssdp_resource_group_set_max_age (gupnp_plugs_resource_group, GUPNP_MAX_AGE);
-        gssdp_resource_group_set_message_delay(gupnp_plugs_resource_group, GUPNP_MESSAGE_DELAY);
-
-        std::stringstream plugs_device_urn;
-        plugs_device_urn << "urn:Muzzley:device:" << MUZZLEY_PLUGS_PROFILEID << ":1";
-        const std::string tmp_plugs_urn = plugs_device_urn.str();
-        const char* plugs_device_urn_char = tmp_plugs_urn.c_str();    
-       
-        std::stringstream plugs_host;
-        plugs_host << "http://" << gupnp_context_get_host_ip (gupnp_plugs_context) << ":" << gupnp_context_get_port (gupnp_plugs_context) << "/" << gupnp_root_device_get_relative_location(gupnp_plugs_dev);
-        const char* plugs_host_char = plugs_host.str().c_str(); 
-
-        cout << endl << "GUPNP PLUGS INFO:" << endl << flush;
-        cout << "URN: " << plugs_device_urn_char << endl << flush;
-        cout << "HOST: " << plugs_host_char << endl << flush;
-        cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_plugs_dev) << endl << flush;
-        cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_plugs_dev) << endl << flush;
-        cout << "PORT: " << gupnp_context_get_port (gupnp_plugs_context) << endl << endl << flush;
-
-        //gssdp_resource_group_add_resource_simple(gupnp_lighting_resource_group, lighting_device_urn_char, lighting_device_urn_char , lighting_host_char );
-        //gssdp_resource_group_add_resource_simple(gupnp_plugs_resource_group, plugs_device_urn_char, plugs_device_urn_char , plugs_host_char );
-        //gssdp_resource_group_set_available (gupnp_lighting_resource_group, TRUE);
-        //gssdp_resource_group_set_available (gupnp_plugs_resource_group, TRUE);
-
-        // Run the main loop
-        main_loop = g_main_loop_new (NULL, FALSE);
-        g_main_loop_run (main_loop);
-          
-        
+	
+    	while(true){}
+	
         cleanup();
 
     }catch(exception& e){
