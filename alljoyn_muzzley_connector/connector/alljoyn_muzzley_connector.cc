@@ -167,7 +167,17 @@
 #define MUZZLEY_PLUGS_UDN "muzzley-plugs-udn"
 #define MUZZLEY_SERIALNUMBER_LIGHTING "muzzley-lighting-serialnumber-lisbon-office-1"
 #define MUZZLEY_SERIALNUMBER_PLUGS "muzzley-plugs-serialnumber-lisbon-office-1"
-#define MUZZLEY_LAMPLIST_INTERVAL 30
+#define MUZZLEY_NETWORK_INTERFACE "eth0"
+#define MUZZLEY_NETWORK_LIGHTING_PORT 50000
+#define MUZZLEY_NETWORK_PLUGS_PORT 51000
+#define MUZZLEY_STATUS_INTERVAL 60
+
+//Mac Address
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <unistd.h>
+
 
 using namespace std;
 #if !defined __APPLE__
@@ -193,13 +203,15 @@ ControllerNotificationReceiver* controller_receiver = 0;
 
 BusAttachment* bus;
 
-string muzzley_macAddress = "AABBCCDDEEFF";
+string muzzley_lighting_macAddress;
+string muzzley_plugs_macAddress;
 string muzzley_lighting_deviceKey;
 string muzzley_plugs_deviceKey;
 bool muzzley_lighting_registered=false;
 bool muzzley_plugs_registered=false;
 LSFString muzzley_controllerServiceID;
 LSFString muzzley_controllerServiceName;
+
 
 //Component/property/CID/t/time/type
 typedef tuple <string, string, string, int, time_t, string> muzzley_req;
@@ -214,7 +226,27 @@ unordered_map <string, string> muzzley_lamplist;
 
 muzzley::Client _muzzley_plugs_client;
 
+string get_iface_macAdress(string ifc){
+    int fd;
+	struct ifreq ifr;
+    const char *iface = ifc.c_str();
+    unsigned char *mac;
 
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+	ifr.ifr_addr.sa_family = AF_INET;
+	strncpy(ifr.ifr_name , iface , IFNAMSIZ-1);
+	ioctl(fd, SIOCGIFHWADDR, &ifr);
+	close(fd);
+	     
+	mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
+	//printf("Mac : %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n" , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+	char buffer [25];
+	sprintf (buffer, "%.2x%.2x%.2x%.2x%.2x%.2x" , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return string(buffer);    	
+}
+
+       
 void alljoyn_execute_action(Action* action){
     QStatus status = action->executeAction();
     std::cout << "Action: " << action->getWidgetName().c_str() << (status == ER_OK ? " executed successfullly" : " failed") << std::endl;
@@ -388,19 +420,6 @@ void HSVtoRGB( double *r, double *g, double *b, double h, double s, double v )
     }
 }
 
-
-void print_plug_vector(){
-    try{
-        for (unsigned int i = 0; i < plug_vec.size(); i++){
-            cout << endl << "Plug Vector Pos#: " << i << " of# : " << req_vec.size() << endl << flush;
-            cout << "Component: " << get<0>(plug_vec[i]) << endl << flush;
-            cout << "Label: " << get<1>(plug_vec[i]) << endl << endl << flush;
-        }
-    }catch(exception& e){
-        cout << "Exception: " << e.what() << endl << flush;
-    }
-}
-
 int get_plug_vector_pos(string component){
     try{
         for (unsigned int i = 0; i < plug_vec.size(); i++){
@@ -556,6 +575,20 @@ time_t get_plug_vector_time(int i){
     }
 }
 
+void muzzley_plug_vector_print(){
+    try{
+    	cout << endl << "PlugList:" << endl << flush;
+        for (unsigned int i = 0; i < plug_vec.size(); i++){
+            cout << endl << "Pos#: " << i << " of# : " << req_vec.size() << endl << flush;
+            cout << "id: " << get<0>(plug_vec[i]) << endl << flush;
+            cout << "Name: " << get<1>(plug_vec[i]) << endl << endl << flush;
+        }
+        cout << endl << "---END---" << endl << endl << flush;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+    }
+}
+
 void print_request_vector(){
     for (unsigned int i = 0; i < req_vec.size(); i++){
         cout << endl << "Vector Pos#: " << i << " of# : " << req_vec.size() << endl << flush;
@@ -703,7 +736,7 @@ void gupnp_generate_lighting_XML(){
         responseStream << "<modelNumber>" << MUZZLEY_MODELNUMBER << "</modelNumber>\n";
         responseStream << "<UDN>uuid:" << MUZZLEY_LIGHTING_UDN << "</UDN>\n";
         responseStream << "<serialNumber>" << MUZZLEY_SERIALNUMBER_LIGHTING << "</serialNumber>\n";
-        responseStream << "<macAddress>" << muzzley_macAddress << "</macAddress>\n";
+        responseStream << "<macAddress>" << muzzley_lighting_macAddress << "</macAddress>\n";
         responseStream << "<deviceKey>" << muzzley_lighting_deviceKey << "</deviceKey>\n";
         responseStream << "<components>\n";
             if(MUZZLEY_BRIDGE_INFO){
@@ -813,7 +846,7 @@ bool muzzley_lighting_connect_manager(){
     muzzley::JSONObj _json_body_part;
         _json_body_part <<
             "profileId" << MUZZLEY_LIGHTING_PROFILEID <<
-            "macAddress" << muzzley_macAddress <<
+            "macAddress" << muzzley_lighting_macAddress <<
             "serialNumber" << MUZZLEY_SERIALNUMBER_LIGHTING <<
             "friendlyName" << MUZZLEY_LIGHTING_FRIENDLYNAME;
 
@@ -1151,7 +1184,7 @@ void gupnp_generate_plugs_XML(){
     responseStream << "<modelNumber>" << MUZZLEY_MODELNUMBER << "</modelNumber>\n";
     responseStream << "<UDN>uuid:" << MUZZLEY_PLUGS_UDN << "</UDN>\n";
     responseStream << "<serialNumber>" << MUZZLEY_SERIALNUMBER_PLUGS << "</serialNumber>\n";
-    responseStream << "<macAddress>" << muzzley_macAddress << "</macAddress>\n";
+    responseStream << "<macAddress>" << muzzley_plugs_macAddress << "</macAddress>\n";
     responseStream << "<deviceKey>" << muzzley_plugs_deviceKey << "</deviceKey>\n";
     responseStream << "<components>\n";
     try{
@@ -1240,7 +1273,7 @@ bool muzzley_plugs_connect_manager(){
     muzzley::JSONObj _json_body_part;
         _json_body_part <<
             "profileId" << MUZZLEY_PLUGS_PROFILEID <<
-            "macAddress" << muzzley_macAddress <<
+            "macAddress" << muzzley_plugs_macAddress <<
             "serialNumber" << MUZZLEY_SERIALNUMBER_PLUGS <<
             "friendlyName" << MUZZLEY_PLUGS_FRIENDLYNAME;
 
@@ -1265,7 +1298,7 @@ bool muzzley_plugs_connect_manager(){
 
     _req->body(_str_body_part);
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
@@ -1768,6 +1801,7 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         long long saturation_int = color_remap_long_long(long_saturation, COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_PERCENT);
         long long colortemp_int  = color_remap_long_long(long_colortemp,  COLOR_TEMPERATURE_MIN_UINT32, COLOR_TEMPERATURE_MAX_UINT32, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
 
+
         std::cout <<  "\n{\"onOff\": " << onoff << "," << std::endl;
         std::cout <<  "\"brightness\": " << brightness << "," << std::endl;
         std::cout <<  "\"hue\": " << hue << "," << std::endl;
@@ -1798,10 +1832,12 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         }else{
             cout  << "Published brightness to muzzley sucessfully" << endl << flush;
         }
-       
+
+
         double        hue_double = hue_int;
         double saturation_double = color_remap_double(saturation_int, COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, COLOR_DOUBLE_MAX);
                     value_double = color_remap_double(brightness_int, COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, COLOR_DOUBLE_MAX);
+
 
         double red_double, green_double, blue_double;
         HSVtoRGB(&red_double, &green_double, &blue_double, hue_double, saturation_double, value_double);
@@ -2310,7 +2346,7 @@ bool muzzley_handle_plug_request(muzzley::JSONObjT _data){
     
     cout << "Handling plug request for ID: " << component << endl << flush;
     print_request_vector();
-    print_plug_vector();
+    muzzley_plug_vector_print();
     
     int pos = get_plug_vector_pos(component);
     if (pos==-1)
@@ -2359,7 +2395,7 @@ class ControllerClientCallbackHandler : public ControllerClientCallback {
     void ConnectedToControllerServiceCB(const LSFString& controllerServiceDeviceID, const LSFString& controllerServiceName) {
         LSFString uniqueId = controllerServiceDeviceID;
         LSFString name = controllerServiceName;
-        printf("\n%s:\ncontrollerServiceDeviceID = %s\ncontrollerServiceName = %s\n\n", __func__, uniqueId.data(), name.data());
+        printf("\n%s:\ncontrollerServiceDeviceID: %s\ncontrollerServiceName: %s\n\n", __func__, uniqueId.data(), name.data());
         muzzley_controllerServiceID=uniqueId;
         muzzley_controllerServiceName=name;
         connectedToControllerService = true;
@@ -2368,13 +2404,13 @@ class ControllerClientCallbackHandler : public ControllerClientCallback {
     void ConnectToControllerServiceFailedCB(const LSFString& controllerServiceDeviceID, const LSFString& controllerServiceName) {
         LSFString uniqueId = controllerServiceDeviceID;
         LSFString name = controllerServiceName;
-        printf("\n%s:\ncontrollerServiceDeviceID = %s\ncontrollerServiceName = %s\n\n", __func__, uniqueId.data(), name.data());
+        printf("\n%s:\ncontrollerServiceDeviceID: %s\ncontrollerServiceName: %s\n\n", __func__, uniqueId.data(), name.data());
     }
 
     void DisconnectedFromControllerServiceCB(const LSFString& controllerServiceDeviceID, const LSFString& controllerServiceName) {
         LSFString uniqueId = controllerServiceDeviceID;
         LSFString name = controllerServiceName;
-        printf("\n%s:\ncontrollerServiceDeviceID = %s\ncontrollerServiceName = %s\n\n", __func__, uniqueId.data(), name.data());
+        printf("\n%s:\ncontrollerServiceDeviceID: %s\ncontrollerServiceName: %s\n\n", __func__, uniqueId.data(), name.data());
         muzzley_controllerServiceID="";
         muzzley_controllerServiceName="";
         connectedToControllerService = false;
@@ -2401,7 +2437,7 @@ class ControllerServiceManagerCallbackHandler : public ControllerServiceManagerC
     void ControllerServiceNameChangedCB(const LSFString& controllerServiceDeviceID, const LSFString& controllerServiceName) {
         LSFString uniqueId = controllerServiceDeviceID;
         LSFString name = controllerServiceName;
-        printf("\n%s:\ncontrollerServiceDeviceID = %s\ncontrollerServiceName = %s\n\n", __func__, uniqueId.data(), name.data());
+        printf("\n%s:\ncontrollerServiceDeviceID: %s\ncontrollerServiceName: %s\n\n", __func__, uniqueId.data(), name.data());
         muzzley_controllerServiceID=controllerServiceDeviceID;
         muzzley_controllerServiceName=controllerServiceName;
     }
@@ -2419,7 +2455,7 @@ public:
     }
 
     void GetAllLampIDsReplyCB(const LSFResponseCode& responseCode, const LSFStringList& lampIDs) {
-        printf("\n%s():\nresponseCode = %s\nlistsize=%lu", __func__, LSFResponseCodeText(responseCode), lampIDs.size());
+        printf("\n%s():\nresponseCode: %s\nlistsize: %lu", __func__, LSFResponseCodeText(responseCode), lampIDs.size());
         if (responseCode == LSF_OK) {
             //muzzley_lamplist.clear();
             LSFStringList::const_iterator it = lampIDs.begin();
@@ -2438,7 +2474,7 @@ public:
 
     void GetLampNameReplyCB(const LSFResponseCode& responseCode, const LSFString& lampID, const LSFString& language, const LSFString& lampName) {
         LSFString uniqueId = lampID;
-        printf("\n%s:\nresponseCode = %s\nlampID = %s\nlanguage = %s\n", __func__, LSFResponseCodeText(responseCode), uniqueId.data(), language.data());
+        printf("\n%s:\nresponseCode; %s\nlampID: %s\nlanguage: %s\n", __func__, LSFResponseCodeText(responseCode), uniqueId.data(), language.data());
         if (responseCode == LSF_OK) {
             printf("lampName = %s\n\n", lampName.data());
             for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
@@ -2461,20 +2497,20 @@ public:
     
     void GetLampStateReplyCB(const LSFResponseCode& responseCode, const LSFString& lampID, const LampState& lampState) {
         LSFString uniqueId = lampID;
-        printf("\n%s:\nresponseCode = %s\nlampID = %s", __func__, LSFResponseCodeText(responseCode), uniqueId.data());
+        printf("\n%s:\nresponseCode: %s\nlampID: %s", __func__, LSFResponseCodeText(responseCode), uniqueId.data());
         if (responseCode == LSF_OK) {
-            printf("\nstate=%s\n", lampState.c_str());
+            printf("\nstate: %s\n", lampState.c_str());
             muzzley_parseLampState(lampID, lampState, this->_client);
         }
     }
 
     void LampStateChangedCB(const LSFString& lampID, const LampState& lampState) {
-        printf("\n%s:\nlampID = %s\nlampState = \n%s", __func__, lampID.data(), lampState.c_str());
+        printf("\n%s:\nlampID: %s\nlampState: \n%s", __func__, lampID.data(), lampState.c_str());
         muzzley_parseLampState(lampID, lampState, this->_client);
     }
 
     void LampsFoundCB(const LSFStringList& lampIDs) {
-        printf("\n%s():\nlistsize=%lu", __func__, lampIDs.size());
+        printf("\n%s():\nlistsize:%lu", __func__, lampIDs.size());
         LSFStringList::const_iterator it = lampIDs.begin();
         uint8_t count = 1;
         for (; it != lampIDs.end(); ++it) {
@@ -2715,7 +2751,7 @@ void muzzley_parse_plugs_controlpanelunit(string device_id_str, string device_na
     add_plug_vector_pos(device_id_str, device_name_str, plug_property_status, plug_property_volt, plug_property_curr, plug_property_freq, plug_property_watt , plug_property_accu, plug_action_get_properties, plug_action_on, plug_action_off);
     muzzley_add_plugs_component(device_id_str, device_name_str);
     gupnp_generate_plugs_XML();
-    print_plug_vector();
+    muzzley_plug_vector_print();
 }
 
 static void announceHandlerCallback(qcc::String const& busName, unsigned short version, unsigned short port, const AnnounceHandler::ObjectDescriptions& objectDescs, const AnnounceHandler::AboutData& aboutData){
@@ -2884,11 +2920,12 @@ void upnp_advertise(){
 
 
     #if !GLIB_CHECK_VERSION(2,35,0)
-      g_type_init ();
+       g_type_init ();
     #endif
   
     //Lighting UPnP
-    gupnp_lighting_context = gupnp_context_new (NULL, NULL, 0, &error);
+    const char* gupnp_lighting_network_interface = MUZZLEY_NETWORK_INTERFACE;
+    gupnp_lighting_context = gupnp_context_new (NULL, gupnp_lighting_network_interface, MUZZLEY_NETWORK_LIGHTING_PORT, &error);
     if (error) {
         g_printerr ("Error creating the GUPnP lighting context: %s\n", error->message);
         g_error_free (error);
@@ -2918,10 +2955,11 @@ void upnp_advertise(){
     cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_lighting_dev) << endl << flush;
     cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_lighting_dev) << endl << flush;
     cout << "PORT: " << gupnp_context_get_port (gupnp_lighting_context) << endl << flush;
-
+    cout << "INTERFACE: " << gupnp_lighting_network_interface << endl << endl << flush;
 
     //Plugs UPnP
-    gupnp_plugs_context = gupnp_context_new (NULL, NULL, 0, &error);
+    const char* gupnp_plugs_network_interface = MUZZLEY_NETWORK_INTERFACE;
+    gupnp_plugs_context = gupnp_context_new (NULL, gupnp_plugs_network_interface, MUZZLEY_NETWORK_PLUGS_PORT, &error);
     if (error) {
         g_printerr ("Error creating the GUPnP plugs context: %s\n", error->message);
         g_error_free (error);
@@ -2950,7 +2988,8 @@ void upnp_advertise(){
     cout << "HOST: " << plugs_host_char << endl << flush;
     cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_plugs_dev) << endl << flush;
     cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_plugs_dev) << endl << flush;
-    cout << "PORT: " << gupnp_context_get_port (gupnp_plugs_context) << endl << endl << flush;
+    cout << "PORT: " << gupnp_context_get_port (gupnp_plugs_context) << endl << flush;
+    cout << "INTERFACE: " << gupnp_plugs_network_interface << endl << endl << flush;
 
     //gssdp_resource_group_add_resource_simple(gupnp_lighting_resource_group, lighting_device_urn_char, lighting_device_urn_char , lighting_host_char );
     //gssdp_resource_group_add_resource_simple(gupnp_plugs_resource_group, plugs_device_urn_char, plugs_device_urn_char , plugs_host_char );
@@ -2962,10 +3001,11 @@ void upnp_advertise(){
     g_main_loop_run (main_loop);
 }
 
-void lamplist_info(){
+void alljoyn_status_info(){
 	while(true){
 		muzzley_lamplist_print();
-		sleep(MUZZLEY_LAMPLIST_INTERVAL);
+		muzzley_plug_vector_print();
+		sleep(MUZZLEY_STATUS_INTERVAL);
 	}
 }
 
@@ -2984,6 +3024,10 @@ int main(){
     sigaction(SIGQUIT, &action, 0);
     sigaction(SIGINT, &action, 0);
     
+    //Get MACAdress info from the current network interface in use
+    muzzley_lighting_macAddress = get_iface_macAdress(MUZZLEY_NETWORK_INTERFACE);
+       muzzley_plugs_macAddress = get_iface_macAdress(MUZZLEY_NETWORK_INTERFACE);
+
     //Muzzley Client
     muzzley::Client _muzzley_lighting_client;
 
@@ -3053,8 +3097,6 @@ int main(){
         //return 1;
     }
     
-   
-
     //Muzzley Protocol
     _muzzley_lighting_client.setEndpointHost(MUZZLEY_ENDPOINTHOST);
     _muzzley_lighting_client.setLoopAssynchronous(MUZZLEY_LOOPASSYNCHRONOUS);
@@ -3122,7 +3164,7 @@ int main(){
         }
 
         // Waits for global manager plugs devicekey
-        while(!muzzley_lighting_registered || !muzzley_plugs_registered){
+        while(!muzzley_plugs_registered){
             muzzley_plugs_connect_API();
             muzzley_plugs_registered=muzzley_plugs_connect_manager();     
             printf("Waiting for Muzzley plugs registration...\n");
@@ -3141,9 +3183,9 @@ int main(){
     	std::thread upnp_thread(upnp_advertise);
     	upnp_thread.detach();
 
-    	//Lists all alljoyn lamps periodically
-    	std::thread lamplist_thread(lamplist_info);
-    	lamplist_thread.detach();
+    	//Lists all alljoyn devices periodically
+    	std::thread alljoyn_status_thread(alljoyn_status_info);
+    	alljoyn_status_thread.detach();
 
         //Get all Available LampsIDs for upnp server
         status = lampManager.GetAllLampIDs();
