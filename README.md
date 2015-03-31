@@ -257,29 +257,29 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 
 > $ cd $HOME/alljoyn-muzzley/core/alljoyn/build/openwrt/openwrt/debug/dist/cpp/lib
 
-> $ scp liballjoyn.so root@192.168.1.1:/usr/bin
+> $ scp liballjoyn.so root@192.168.1.1:/usr/lib
 
-> $ scp liballjoyn_about.so root@192.168.1.1:/usr/bin
+> $ scp liballjoyn_about.so root@192.168.1.1:/usr/lib
 
 > $ cd $HOME/alljoyn-muzzley/core/alljoyn/build/openwrt/openwrt/debug/dist/config/lib
 
-> $ scp liballjoyn_config.so root@192.168.1.1:/usr/bin
+> $ scp liballjoyn_config.so root@192.168.1.1:/usr/lib
 
 > $ cd $HOME/alljoyn-muzzley/core/alljoyn/build/openwrt/openwrt/debug/dist/controlpanel/lib
 
-> $ scp liballjoyn_controlpanel.so root@192.168.1.1:/usr/bin
+> $ scp liballjoyn_controlpanel.so root@192.168.1.1:/usr/lib
 
 > $ cd $HOME/alljoyn-muzzley/core/alljoyn/build/openwrt/openwrt/debug/dist/notification/lib
 
-> $ scp liballjoyn_notification.so root@192.168.1.1:/usr/bin
+> $ scp liballjoyn_notification.so root@192.168.1.1:/usr/lib
 
 > $ cd $HOME/alljoyn-muzzley/core/alljoyn/build/openwrt/openwrt/debug/dist/onboarding/lib
 
-> $ scp liballjoyn_onboarding.so root@192.168.1.1:/usr/bin
+> $ scp liballjoyn_onboarding.so root@192.168.1.1:/usr/lib
 
 > $ cd $HOME/alljoyn-muzzley/core/alljoyn/build/openwrt/openwrt/debug/dist/services_common/lib
 
-> $ scp liballjoyn_services_common.so root@192.168.1.1:/usr/bin
+> $ scp liballjoyn_services_common.so root@192.168.1.1:/usr/lib
 
 
 18) Replace the AllJoyn Daemon installed on the router (14.06) with the one cross-compiled with the previous command (14.12).
