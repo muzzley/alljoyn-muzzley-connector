@@ -102,6 +102,8 @@
 #define MUZZLEY_DEFAULT_CORE_ENDPOINTHOST "geoplatform.muzzley.com"
 #define MUZZLEY_DEFAULT_API_ENDPOINTHOST "channels.muzzley.com"
 #define MUZZLEY_DEFAULT_MANAGER_ENDPOINTHOST "global-manager.muzzley.com"
+#define MUZZLEY_DEFAULT_API_PORT 80
+#define MUZZLEY_DEFAULT_MANAGER_PORT 80
 
 #define MUZZLEY_MANAGER_REGISTER_URL "/deviceapp/register"
 #define MUZZLEY_MANAGER_COMPONENTS_URL "/deviceapp/components"
@@ -115,6 +117,8 @@
 #define MUZZLEY_LOOPASSYNCHRONOUS true
 #define MUZZLEY_BRIDGE_INFO false
 #define MUZZLEY_READ_REQUEST_TIMEOUT 30
+
+
 
 #define COLOR_MIN 0
 #define COLOR_MAX_UINT32 4294967296
@@ -158,7 +162,7 @@
 #define MUZZLEY_DEFAULT_NETWORK_INTERFACE "br-lan"
 #define MUZZLEY_DEFAULT_NETWORK_LIGHTING_PORT 50000
 #define MUZZLEY_DEFAULT_NETWORK_PLUGS_PORT 51000
-#define MUZZLEY_STATUS_INTERVAL 60
+#define MUZZLEY_DEFAULT_STATUS_INTERVAL 60
 
 //Mac Address
 #include <sys/socket.h>
@@ -184,8 +188,9 @@ const char* muzzley_lighting_profileid=NULL;
 const char* muzzley_lighting_apptoken=NULL;
 const char* muzzley_plugs_profileid=NULL;
 const char* muzzley_plugs_apptoken=NULL;
-
 const char* muzzley_network_interface=NULL;
+int muzzley_api_port=0;
+int muzzley_manager_port=0;
 int muzzley_network_lighting_port=0;
 int muzzley_network_plugs_port=0;
 
@@ -228,35 +233,24 @@ unordered_map <string, string> muzzley_lamplist;
 muzzley::Client _muzzley_plugs_client;
 
 
-void muzzley_print_status_info(){
-	cout << endl << "MUZZLEY INFO:" << endl << flush;
-    cout << "CORE ENDPOINTHOST: " << muzzley_core_endpointhost << endl << flush;
-    cout << "API ENDPOINTHOST: " << muzzley_api_endpointhost << endl << flush;
-    cout << "MANAGER ENDPOINTHOST: " << muzzley_manager_endpointhost << endl << flush;
-    cout << "LIGHTING PROFILEID: " << muzzley_lighting_profileid << endl << flush;
-    cout << "LIGHTING APPTOKEN: " << muzzley_lighting_apptoken << endl << flush;
-    cout << "PLUGS PROFILEID: " << muzzley_plugs_profileid << endl << flush;
-    cout << "PLUGS APPTOKEN: " << muzzley_plugs_apptoken << endl << endl << flush;
-}
-
 string get_iface_macAdress(string ifc){
     int fd;
-	struct ifreq ifr;
+    struct ifreq ifr;
     const char *iface = ifc.c_str();
     unsigned char *mac;
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
-	ifr.ifr_addr.sa_family = AF_INET;
-	strncpy(ifr.ifr_name , iface , IFNAMSIZ-1);
-	ioctl(fd, SIOCGIFHWADDR, &ifr);
-	close(fd);
-	     
-	mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
-	//printf("Mac : %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n" , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    ifr.ifr_addr.sa_family = AF_INET;
+    strncpy(ifr.ifr_name , iface , IFNAMSIZ-1);
+    ioctl(fd, SIOCGIFHWADDR, &ifr);
+    close(fd);
+         
+    mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
+    //printf("Mac : %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n" , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
-	char buffer [25];
-	sprintf (buffer, "%.2x%.2x%.2x%.2x%.2x%.2x" , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    return string(buffer);    	
+    char buffer [25];
+    sprintf (buffer, "%.2x%.2x%.2x%.2x%.2x%.2x" , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return string(buffer);        
 }
 
        
@@ -590,7 +584,7 @@ time_t get_plug_vector_time(int i){
 
 void muzzley_plug_vector_print(){
     try{
-    	cout << endl << "PlugList:" << endl << flush;
+        cout << endl << "PlugList:" << endl << flush;
         for (unsigned int i = 0; i < plug_vec.size(); i++){
             cout << endl << "Pos#: " << i << " of# : " << req_vec.size() << endl << flush;
             cout << "id: " << get<0>(plug_vec[i]) << " Name: " << get<1>(plug_vec[i]) << endl << flush;
@@ -719,7 +713,7 @@ string muzzley_lamplist_get_lampname(string lampID){
 }
 
 void muzzley_lamplist_print(){
-	cout << endl << "Lamplist: " << endl << flush;
+    cout << endl << "Lamplist: " << endl << flush;
     for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
         for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
             cout << "id: " << local_it->first << " Name: " << local_it->second << endl << flush;
@@ -802,7 +796,7 @@ bool muzzley_lighting_connect_API(){
 
     // Instantiate an HTTP(s) socket stream
     muzzley::socketstream _socket;
-    _socket.open(muzzley_api_endpointhost, 80); //HTTPS:443
+    _socket.open(muzzley_api_endpointhost, muzzley_api_port); //HTTPS:443
 
     // Instantiate an HTTP request object
     muzzley::HTTPReq _req;
@@ -845,7 +839,7 @@ bool muzzley_lighting_connect_manager(){
 
     // Instantiate an HTTP(s) socket stream
     muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, 80);
+    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
     // Instantiate an HTTP request object
     muzzley::HTTPReq _req;
@@ -919,7 +913,7 @@ bool muzzley_replace_lighting_components(){
     }
 
     muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, 80);
+    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
     muzzley::HTTPReq _req;
     _req->method(muzzley::HTTPPost);
@@ -995,7 +989,7 @@ bool muzzley_add_lighting_component(LSFString lampID, LSFString lampName){
     }
 
     muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, 80);
+    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
     muzzley::HTTPReq _req;
     _req->method(muzzley::HTTPPut);
@@ -1058,7 +1052,7 @@ bool muzzley_add_lighting_components(LSFStringList new_lampIDs){
     }
 
     muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, 80);
+    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
     muzzley::HTTPReq _req;
     _req->method(muzzley::HTTPPut);
@@ -1123,7 +1117,7 @@ bool muzzley_remove_lighting_components(LSFStringList del_lampIDs){
     }
 
     muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, 80);
+    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
     muzzley::HTTPReq _req;
     _req->method(muzzley::HTTPDelete);
@@ -1229,7 +1223,7 @@ void gupnp_generate_plugs_XML(){
 bool muzzley_plugs_connect_API(){
     // Instantiate an HTTP(s) socket stream
     muzzley::socketstream _socket;
-    _socket.open(muzzley_api_endpointhost, 80); //HTTPS:443
+    _socket.open(muzzley_api_endpointhost, muzzley_api_port); //HTTPS:443
 
     // Instantiate an HTTP request object
     muzzley::HTTPReq _req;
@@ -1272,7 +1266,7 @@ bool muzzley_plugs_connect_manager(){
 
     // Instantiate an HTTP(s) socket stream
     muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, 80);
+    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
     // Instantiate an HTTP request object
     muzzley::HTTPReq _req;
@@ -1346,7 +1340,7 @@ bool muzzley_replace_plugs_components(){
     }
 
     muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, 80);
+    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
     muzzley::HTTPReq _req;
     _req->method(muzzley::HTTPPost);
@@ -1409,7 +1403,7 @@ bool muzzley_add_plugs_component(string plug_id, string plug_name){
     }
 
     muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, 80);
+    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
     muzzley::HTTPReq _req;
     _req->method(muzzley::HTTPPut);
@@ -1470,7 +1464,7 @@ bool muzzley_add_plugs_components(string plug_id, string plug_name){
     }
 
     muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, 80);
+    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
     muzzley::HTTPReq _req;
     _req->method(muzzley::HTTPPut);
@@ -1531,7 +1525,7 @@ bool muzzley_remove_plugs_component(string plug_id, string plug_name){
     }
 
     muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, 80);
+    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
     muzzley::HTTPReq _req;
     _req->method(muzzley::HTTPDelete);
@@ -2827,7 +2821,7 @@ static void announceHandlerCallback(qcc::String const& busName, unsigned short v
             std::vector<qcc::String> vector = it->second;
 
             if(key=="/org/allseen/LSF/Lamp"){
-            	gupnp_generate_lighting_XML();
+                gupnp_generate_lighting_XML();
                 muzzley_lamplist_update_lampname(device_id_str, device_name_str);
                 muzzley_add_lighting_component(device_id_str, device_name_str);
             }
@@ -3014,11 +3008,39 @@ void upnp_advertise(){
 }
 
 void alljoyn_status_info(){
-	while(true){
-		muzzley_lamplist_print();
-		muzzley_plug_vector_print();
-		sleep(MUZZLEY_STATUS_INTERVAL);
-	}
+    while(true){
+        muzzley_lamplist_print();
+        muzzley_plug_vector_print();
+        sleep(MUZZLEY_DEFAULT_STATUS_INTERVAL);
+    }
+}
+
+void cmd_line_parser_help(){
+    cout << "Alljoyn-Muzzley Connector CMD line help:" << endl << flush;
+    cout << "--api_endpointhost             set the Muzzley API Endpointhost" << endl << flush;
+    cout << "--api_port                     set the Muzzley API Port number" << endl << flush;
+    cout << "--manager_endpointhost         set the Muzzley Manager Endpointhost" << endl << flush;
+    cout << "--manager_port                 set the Muzzley Manager Port number" << endl << flush;
+    cout << "--lighting_profileid           set the Muzzley Lighting Profileid" << endl << flush;
+    cout << "--lighting_app_token           set the Muzzley Lighting AppToken" << endl << flush;
+    cout << "--plugs_profileid              set the Muzzley Plugs Profileid" << endl << flush;
+    cout << "--plugs_app_token              set the Muzzley Plugs AppToken" << endl << flush;        
+    cout << "--network_lighting_port        set the Muzzley Lighting UPNP Port number" << endl << flush;
+    cout << "--network_plugs_port           set the Muzzley PLugs UPNP Port number" << endl << flush;
+    cout << "--help                         show this help text" << endl << endl << flush;
+}
+
+void muzzley_print_status_info(){
+    cout << endl << "MUZZLEY INFO:" << endl << flush;
+    cout << "CORE ENDPOINTHOST: " << muzzley_core_endpointhost << endl << flush;
+    cout << "API ENDPOINTHOST: " << muzzley_api_endpointhost << endl << flush;
+    cout << "API PORT: " << muzzley_api_port << endl << flush;
+    cout << "MANAGER ENDPOINTHOST: " << muzzley_manager_endpointhost << endl << flush;
+    cout << "MANAGER PORT: " << muzzley_manager_port << endl << flush;
+    cout << "LIGHTING PROFILEID: " << muzzley_lighting_profileid << endl << flush;
+    cout << "LIGHTING APPTOKEN: " << muzzley_lighting_apptoken << endl << flush;
+    cout << "PLUGS PROFILEID: " << muzzley_plugs_profileid << endl << flush;
+    cout << "PLUGS APPTOKEN: " << muzzley_plugs_apptoken << endl << endl << flush;
 }
 
 int main(int argc, char* argv[]){
@@ -3036,9 +3058,6 @@ int main(int argc, char* argv[]){
     sigaction(SIGQUIT, &action, 0);
     sigaction(SIGINT, &action, 0);
 
-   
-
-
     //Muzzley Client
     muzzley::Client _muzzley_lighting_client;
 
@@ -3046,6 +3065,8 @@ int main(int argc, char* argv[]){
     muzzley_core_endpointhost=MUZZLEY_DEFAULT_CORE_ENDPOINTHOST;
     muzzley_api_endpointhost=MUZZLEY_DEFAULT_API_ENDPOINTHOST;
     muzzley_manager_endpointhost=MUZZLEY_DEFAULT_MANAGER_ENDPOINTHOST;
+    muzzley_api_port=MUZZLEY_DEFAULT_API_PORT;
+    muzzley_manager_port=MUZZLEY_DEFAULT_MANAGER_PORT;
     muzzley_lighting_profileid=MUZZLEY_DEFAULT_LIGHTING_PROFILEID;
     muzzley_lighting_apptoken=MUZZLEY_DEFAULT_LIGHTING_APP_TOKEN;
     muzzley_plugs_profileid=MUZZLEY_DEFAULT_PLUGS_PROFILEID;
@@ -3060,45 +3081,45 @@ int main(int argc, char* argv[]){
 
     //Parse cmd line custom Muzzley tokens
     if(argc>1){
-    	for (int i = 1; i < argc; i++) {
-	    	cout << "Argv[" << i << "]: " << argv[i] << endl << flush;
-	        if (strcmp(argv[i],"--core_endpointhost")==0) {
-	            muzzley_core_endpointhost = argv[i + 1];
-			    cout << "Muzzley core endpointhost set to: " << muzzley_core_endpointhost << endl << flush;
-			    _muzzley_lighting_client.setEndpointHost(muzzley_core_endpointhost);
-			    _muzzley_plugs_client.setEndpointHost(muzzley_core_endpointhost);
-			} else if (strcmp(argv[i], "--api_endpointhost")==0) {
-	            muzzley_api_endpointhost = argv[i + 1];
-	            cout << "Muzzley api endpointhost set to: " << muzzley_api_endpointhost << endl << flush;
-			} else if (strcmp(argv[i], "--manager_endpointhost")==0) {
-	            muzzley_manager_endpointhost = argv[i + 1];
-			    cout << "Muzzley manager endpointhost set to: " << muzzley_manager_endpointhost << endl << flush;
-	        } else if (strcmp(argv[i], "--lighting_profileid")==0) {
-	            muzzley_lighting_profileid = argv[i + 1];
-	            cout << "Muzzley lighting profileid set to: " << muzzley_lighting_profileid << endl << flush;
-	        } else if (strcmp(argv[i], "--lighting_app_token")==0) {
-	            muzzley_lighting_apptoken = argv[i + 1];
-	            cout << "Muzzley lighting apptoken set to: " << muzzley_lighting_apptoken << endl << flush;
-	        } else if (strcmp(argv[i], "--plugs_profileid")==0) {
-	            muzzley_plugs_profileid = argv[i + 1];
-	            cout << "Muzzley plugs profileid set to: " << muzzley_plugs_profileid << endl << flush;
-	        } else if (strcmp(argv[i], "--plugs_app_token")==0) {
-	            muzzley_plugs_apptoken = argv[i + 1];
-	            cout << "Muzzley plugs apptoken set to: " << muzzley_plugs_apptoken << endl << flush;
-	    	} else if (strcmp(argv[i], "--network_interface")==0) {
-	            muzzley_network_interface = argv[i + 1];
-	            cout << "Muzzley network interface set to: " << muzzley_network_interface << endl << flush;
-	        } else if (strcmp(argv[i], "--network_lighting_port")==0) {
-	            muzzley_network_lighting_port = atoi(argv[i + 1]);
-	            cout << "Muzzley network lighting port set to: " << muzzley_network_lighting_port << endl << flush;
-	        } else if (strcmp(argv[i], "--network_plugs_port")==0) {
-	            muzzley_network_plugs_port = atoi(argv[i + 1]);
-	            cout << "Muzzley network plugs port set to: " << muzzley_network_plugs_port << endl << flush;
-	        }
-		}
+        for (int i = 1; i < argc; i++) {
+            if (strcmp(argv[i],"--core_endpointhost")==0) {
+                muzzley_core_endpointhost = argv[i + 1];
+                _muzzley_lighting_client.setEndpointHost(muzzley_core_endpointhost);
+                _muzzley_plugs_client.setEndpointHost(muzzley_core_endpointhost);
+            } else if (strcmp(argv[i], "--api_endpointhost")==0) {
+                muzzley_api_endpointhost = argv[i + 1];
+            } else if (strcmp(argv[i], "--api_port")==0) {
+                muzzley_api_port = atoi(argv[i + 1]);
+            } else if (strcmp(argv[i], "--manager_endpointhost")==0) {
+                muzzley_manager_endpointhost = argv[i + 1];
+            } else if (strcmp(argv[i], "--manager_port")==0) {
+                muzzley_manager_port = atoi(argv[i + 1]);
+            } else if (strcmp(argv[i], "--lighting_profileid")==0) {
+                muzzley_lighting_profileid = argv[i + 1];
+            } else if (strcmp(argv[i], "--lighting_app_token")==0) {
+                muzzley_lighting_apptoken = argv[i + 1];
+            } else if (strcmp(argv[i], "--plugs_profileid")==0) {
+                muzzley_plugs_profileid = argv[i + 1];
+            } else if (strcmp(argv[i], "--plugs_app_token")==0) {
+                muzzley_plugs_apptoken = argv[i + 1];
+            } else if (strcmp(argv[i], "--network_interface")==0) {
+                muzzley_network_interface = argv[i + 1];
+            } else if (strcmp(argv[i], "--network_lighting_port")==0) {
+                muzzley_network_lighting_port = atoi(argv[i + 1]);
+            } else if (strcmp(argv[i], "--network_plugs_port")==0) {
+                muzzley_network_plugs_port = atoi(argv[i + 1]);
+            } else if (strcmp(argv[i], "--help")==0) {
+                cmd_line_parser_help();
+                exit(0);
+            }else {
+                cmd_line_parser_help();
+                exit(0);
+            }
+            i++;
+        }
     }
     
-  	muzzley_print_status_info();
+      muzzley_print_status_info();
   
     //Initialize alljoyn bus ("ClientTest")
     bus = new BusAttachment("MuzzleyConnector", true);
@@ -3246,19 +3267,19 @@ int main(int argc, char* argv[]){
         cout << "Muzzley plugs started!" << endl << flush;
 
         //Starts the UPNP advertisement
-    	std::thread upnp_thread(upnp_advertise);
-    	upnp_thread.detach();
+        std::thread upnp_thread(upnp_advertise);
+        upnp_thread.detach();
 
-    	//Lists all alljoyn devices periodically
-    	std::thread alljoyn_status_thread(alljoyn_status_info);
-    	alljoyn_status_thread.detach();
+        //Lists all alljoyn devices periodically
+        std::thread alljoyn_status_thread(alljoyn_status_info);
+        alljoyn_status_thread.detach();
 
         //Get all Available LampsIDs for upnp server
         status = lampManager.GetAllLampIDs();
         muzzley_query_unknown_lampnames(&lampManager);
-	
-    	while(true){}
-	
+    
+        while(true){}
+    
         cleanup();
 
     }catch(exception& e){
