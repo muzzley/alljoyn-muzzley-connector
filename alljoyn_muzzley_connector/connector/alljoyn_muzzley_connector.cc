@@ -119,7 +119,6 @@
 #define MUZZLEY_READ_REQUEST_TIMEOUT 30
 
 
-
 #define COLOR_MIN 0
 #define COLOR_MAX_UINT32 4294967296
 #define COLOR_MAX_PERCENT 100
@@ -139,7 +138,9 @@
 #define DEVICE_BULB "bulb"
 #define DEVICE_BRIDGE "bridge"
 #define PROPERTY_STATUS "status"
-#define PROPERTY_COLOR "color"
+#define PROPERTY_COLOR_RGB "color"
+#define PROPERTY_COLOR_HSV "color-hsv"
+#define PROPERTY_COLOR_HSVT "color-hsvt"
 #define PROPERTY_BRIGHTNESS "brightness"
 #define PROPERTY_VOLTAGE "voltage"
 #define PROPERTY_CURRENT "current"
@@ -181,6 +182,7 @@ using namespace lsf;
 using namespace ajn;
 using namespace services;
 
+const char* muzzley_color_mode=NULL;
 const char* muzzley_core_endpointhost=NULL;
 const char* muzzley_api_endpointhost=NULL;
 const char* muzzley_manager_endpointhost=NULL;
@@ -189,12 +191,19 @@ const char* muzzley_lighting_apptoken=NULL;
 const char* muzzley_plugs_profileid=NULL;
 const char* muzzley_plugs_apptoken=NULL;
 const char* muzzley_network_interface=NULL;
+string muzzley_lighting_macAddress;
+string muzzley_plugs_macAddress;
+string muzzley_lighting_deviceKey;
+string muzzley_plugs_deviceKey;
 int muzzley_api_port=0;
 int muzzley_manager_port=0;
 int muzzley_network_lighting_port=0;
 int muzzley_network_plugs_port=0;
 
-
+LSFString muzzley_controllerServiceID;
+LSFString muzzley_controllerServiceName;
+bool muzzley_lighting_registered=false;
+bool muzzley_plugs_registered=false;
 bool connectedToControllerService = false;
 LSFStringList lampList;
 
@@ -208,15 +217,6 @@ NotificationSender* notificationSender = 0;
 ControllerNotificationReceiver* controller_receiver = 0;
 
 BusAttachment* bus;
-
-string muzzley_lighting_macAddress;
-string muzzley_plugs_macAddress;
-string muzzley_lighting_deviceKey;
-string muzzley_plugs_deviceKey;
-bool muzzley_lighting_registered=false;
-bool muzzley_plugs_registered=false;
-LSFString muzzley_controllerServiceID;
-LSFString muzzley_controllerServiceName;
 
 
 //Component/property/CID/t/time/type
@@ -1709,12 +1709,12 @@ bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blu
         _s1.setProfile(muzzley_lighting_profileid);
         _s1.setChannel(muzzley_lighting_deviceKey);
         _s1.setComponent(lampID);
-        _s1.setProperty(PROPERTY_COLOR);
+        _s1.setProperty(PROPERTY_COLOR_RGB);
 
 
         muzzley::Message _m1;
 
-        int pos = get_request_vector_pos(lampID, PROPERTY_COLOR);
+        int pos = get_request_vector_pos(lampID, PROPERTY_COLOR_RGB);
         if(pos!=-1){
             _m1.setStatus(true);
             _m1.setCorrelationID(get_request_vector_CID(pos));
@@ -1728,7 +1728,7 @@ bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blu
                 "profile" << muzzley_lighting_profileid <<
                 "channel" << muzzley_lighting_deviceKey <<
                 "component" << lampID <<
-                "property" << PROPERTY_COLOR <<
+                "property" << PROPERTY_COLOR_RGB <<
                 "data" << JSON(
                     "value" <<  JSON(
                         "r" << red <<
@@ -1755,6 +1755,153 @@ bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blu
                 "r" << red <<
                 "g" << green <<
                 "b" << blue
+                )    
+            )
+        ));
+
+        //cout << _s1 << endl << flush;
+        //cout << _m1 << endl << flush;
+        semaphore_lock(semaphore);
+        _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
+        semaphore_unlock(semaphore);
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+}
+
+bool muzzley_publish_lampColor_hsv(LSFString lampID, int hue, int saturation, int value, muzzley::Client* _muzzley_lighting_client){
+    try{
+
+        int semaphore = semaphore_start();
+
+        muzzley::Subscription _s1;
+        _s1.setNamespace(MUZZLEY_WORKSPACE);
+        _s1.setProfile(muzzley_lighting_profileid);
+        _s1.setChannel(muzzley_lighting_deviceKey);
+        _s1.setComponent(lampID);
+        _s1.setProperty(PROPERTY_COLOR_HSV);
+
+
+        muzzley::Message _m1;
+
+        int pos = get_request_vector_pos(lampID, PROPERTY_COLOR_HSV);
+        if(pos!=-1){
+            _m1.setStatus(true);
+            _m1.setCorrelationID(get_request_vector_CID(pos));
+            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
+            _m1.setData(JSON(
+                "value" << JSON(
+                    "h" << hue <<
+                    "s" << saturation <<
+                    "v" << value
+                ) <<
+                "profile" << muzzley_lighting_profileid <<
+                "channel" << muzzley_lighting_deviceKey <<
+                "component" << lampID <<
+                "property" << PROPERTY_COLOR_HSV <<
+                "data" << JSON(
+                    "value" <<  JSON(
+                        "h" << hue <<
+                        "s" << saturation <<
+                        "v" << value
+                    )
+                ) 
+            ));
+
+            //cout << _s1 << endl << flush;
+            //cout << _m1 << endl << flush;
+            semaphore_lock(semaphore);
+            _muzzley_lighting_client->reply(_m1, _m1);
+            semaphore_unlock(semaphore);
+            delete_request_vector_pos(pos);
+            cout << "Replyed bulb color hsv!" << endl << flush;
+            return true;
+        }
+      
+        _m1.setData(JSON(
+            "io" << "i" <<
+            "data" << JSON(
+                "value" << JSON(
+                    "h" << hue <<
+                    "s" << saturation <<
+                    "v" << value
+                )    
+            )
+        ));
+
+        //cout << _s1 << endl << flush;
+        //cout << _m1 << endl << flush;
+        semaphore_lock(semaphore);
+        _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
+        semaphore_unlock(semaphore);
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+}
+
+bool muzzley_publish_lampColor_hsvt(LSFString lampID, int hue, int saturation, int value, int temperature, muzzley::Client* _muzzley_lighting_client){
+    try{
+
+        int semaphore = semaphore_start();
+
+        muzzley::Subscription _s1;
+        _s1.setNamespace(MUZZLEY_WORKSPACE);
+        _s1.setProfile(muzzley_lighting_profileid);
+        _s1.setChannel(muzzley_lighting_deviceKey);
+        _s1.setComponent(lampID);
+        _s1.setProperty(PROPERTY_COLOR_HSVT);
+
+
+        muzzley::Message _m1;
+
+        int pos = get_request_vector_pos(lampID, PROPERTY_COLOR_HSVT);
+        if(pos!=-1){
+            _m1.setStatus(true);
+            _m1.setCorrelationID(get_request_vector_CID(pos));
+            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
+            _m1.setData(JSON(
+                "value" << JSON(
+                    "h" << hue <<
+                    "s" << saturation <<
+                    "v" << value <<
+                    "t" << temperature
+                ) <<
+                "profile" << muzzley_lighting_profileid <<
+                "channel" << muzzley_lighting_deviceKey <<
+                "component" << lampID <<
+                "property" << PROPERTY_COLOR_HSVT <<
+                "data" << JSON(
+                    "value" <<  JSON(
+                        "h" << hue <<
+                        "s" << saturation <<
+                        "v" << value <<
+                        "t" << temperature
+                    )
+                ) 
+            ));
+
+            //cout << _s1 << endl << flush;
+            //cout << _m1 << endl << flush;
+            semaphore_lock(semaphore);
+            _muzzley_lighting_client->reply(_m1, _m1);
+            semaphore_unlock(semaphore);
+            delete_request_vector_pos(pos);
+            cout << "Replyed bulb color hsvt!" << endl << flush;
+            return true;
+        }
+      
+        _m1.setData(JSON(
+            "io" << "i" <<
+            "data" << JSON(
+                "value" << JSON(
+                    "h" << hue <<
+                    "s" << saturation <<
+                    "v" << value <<
+                    "t" << temperature
                 )    
             )
         ));
@@ -1807,6 +1954,21 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         long long saturation_int = color_remap_long_long(long_saturation, COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_PERCENT);
         long long colortemp_int  = color_remap_long_long(long_colortemp,  COLOR_TEMPERATURE_MIN_UINT32, COLOR_TEMPERATURE_MAX_UINT32, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
 
+        if(strcmp(muzzley_color_mode, PROPERTY_COLOR_HSV)==0){
+        	if(muzzley_publish_lampColor_hsv(lampID, hue_int, saturation_int, brightness_int, _muzzley_lighting_client)==false){
+            	cout  << "Error publishing lampcolorHSV to muzzley" << endl << flush;
+	        }else{
+	            cout  << "Published lampcolorHSV to muzzley sucessfully" << endl << flush;
+	        }
+        }
+        
+        if(strcmp(muzzley_color_mode, PROPERTY_COLOR_HSVT)==0){
+        	if(muzzley_publish_lampColor_hsvt(lampID, hue_int, saturation_int, brightness_int, colortemp_int, _muzzley_lighting_client)==false){
+            	cout  << "Error publishing lampcolorHSVT to muzzley" << endl << flush;
+	        }else{
+	            cout  << "Published lampcolorHSVT to muzzley sucessfully" << endl << flush;
+	        }
+        }
 
         std::cout <<  "\n{\"onOff\": " << onoff << "," << std::endl;
         std::cout <<  "\"brightness\": " << brightness << "," << std::endl;
@@ -1862,12 +2024,14 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         printf("Green: %d\n", green);
         printf("Blue: %d\n\n", blue);
         
-        if(muzzley_publish_lampColor_rgb(lampID, red, green, blue, _muzzley_lighting_client)==false){
-            cout  << "Error publishing lampcolorRGB to muzzley" << endl << flush;
-        }else{
-            cout  << "Published lampcolorRGB to muzzley sucessfully" << endl << flush;
+        if(strcmp(muzzley_color_mode, PROPERTY_COLOR_RGB)==0){
+        	if(muzzley_publish_lampColor_rgb(lampID, red, green, blue, _muzzley_lighting_client)==false){
+            	cout  << "Error publishing lampcolorRGB to muzzley" << endl << flush;
+	        }else{
+	            cout  << "Published lampcolorRGB to muzzley sucessfully" << endl << flush;
+	        }
         }
-            
+ 
         return true;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -1944,6 +2108,72 @@ bool muzzley_handle_lighting_write_RGB_request(LampManager& lampManager, string 
     }
 }
 
+bool muzzley_handle_lighting_write_HSV_request(LampManager& lampManager, string component, int hue, int saturation, int value){
+    int status;
+    try{
+        
+        double hue_double        = color_remap_double(hue,        COLOR_MIN, COLOR_MAX_360DEG,          COLOR_MIN, COLOR_DOUBLE_MAX);
+        double saturation_double = color_remap_double(saturation, COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, COLOR_DOUBLE_MAX);
+        double value_double      = color_remap_double(value,      COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, COLOR_DOUBLE_MAX);
+        
+        long long long_hue        = color_remap_long_long(round((hue_double*100)),        COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_saturation = color_remap_long_long(round((saturation_double*100)), COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_brightness = color_remap_long_long(round((value_double*100)),      COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
+       
+        printf("Calculated hue double: %f\n", hue_double);
+        printf("Calculated saturation double: %f\n", saturation_double);
+        printf("Calculated value double: %f\n", value_double);
+        printf("Brightness: %lld\n", long_brightness);
+        printf("Hue: %lld\n", long_hue);
+        printf("Saturation: %lld\n", long_saturation);
+   
+        //onoff/Hue/Saturation/Colortemp/Brightness
+        LampState state(true, long_hue, long_saturation, COLOR_TEMPERATURE_DEFAULT_DEC, long_brightness);
+        status = lampManager.TransitionLampState(component, state);
+        if(status != LSF_OK)
+            cout << "LampManager Error: " << status << endl << flush;
+        return true; 
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+}
+
+bool muzzley_handle_lighting_write_HSVT_request(LampManager& lampManager, string component, int hue, int saturation, int value, int colortemp){
+    int status;
+    try{
+        
+        double hue_double        = color_remap_double(hue,        COLOR_MIN, COLOR_MAX_360DEG,          COLOR_MIN, COLOR_DOUBLE_MAX);
+        double saturation_double = color_remap_double(saturation, COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, COLOR_DOUBLE_MAX);
+        double value_double      = color_remap_double(value,      COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, COLOR_DOUBLE_MAX);
+        double colortemp_double  = color_remap_double(colortemp,  COLOR_MIN, COLOR_TEMPERATURE_MAX_DEC, COLOR_MIN, COLOR_DOUBLE_MAX);
+
+        long long long_hue        = color_remap_long_long(round(hue_double),              COLOR_MIN, COLOR_MAX_360DEG,          COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_saturation = color_remap_long_long(round((saturation_double*100)), COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_brightness = color_remap_long_long(round((value_double*100)),      COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_colortemp  = color_remap_long_long(round((colortemp_double*100)),  COLOR_MIN, COLOR_TEMPERATURE_MAX_DEC, COLOR_MIN, (COLOR_TEMPERATURE_MAX_UINT32-1));
+
+        printf("Calculated hue double: %f\n", hue_double);
+        printf("Calculated saturation double: %f\n", saturation_double);
+        printf("Calculated value double: %f\n", value_double);
+        printf("Calculated colortemp double: %f\n", colortemp_double);
+        printf("Brightness: %lld\n", long_brightness);
+        printf("Hue: %lld\n", long_hue);
+        printf("Saturation: %lld\n", long_saturation);
+        printf("ColorTemp: %lld\n", long_colortemp);
+        
+        //onoff/Hue/Saturation/Colortemp/Brightness
+        LampState state(true, long_hue, long_saturation, long_colortemp, long_brightness);
+        status = lampManager.TransitionLampState(component, state);
+        if(status != LSF_OK)
+            cout << "LampManager Error: " << status << endl << flush;
+        return true; 
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+}
+
 bool muzzley_handle_lighting_read_request(LampManager& lampManager, string component, string property, string cid, int t){
     int status;
     try{
@@ -1976,7 +2206,7 @@ bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT
         muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
     }
     if (io=="w"){
-        if(property=="status"){
+        if(property==PROPERTY_STATUS){
             bool bool_status = (bool)_data["d"]["p"]["data"]["value"];
             muzzley_handle_lighting_write_status_request(lampManager, component, bool_status);
         }
@@ -1984,11 +2214,25 @@ bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT
             double brightness = (double)_data["d"]["p"]["data"]["value"];
             muzzley_handle_lighting_write_brightness_request(lampManager, component, brightness);   
         }
-        if(property==PROPERTY_COLOR){
+        if(property==PROPERTY_COLOR_RGB){
             int red   = (int)_data["d"]["p"]["data"]["value"]["r"];
             int green = (int)_data["d"]["p"]["data"]["value"]["g"];
             int blue  = (int)_data["d"]["p"]["data"]["value"]["b"];
-            muzzley_handle_lighting_write_RGB_request(lampManager, component, red,  green,  blue);                                
+            muzzley_handle_lighting_write_RGB_request(lampManager, component, red, green, blue);                                
+        }
+        if(property==PROPERTY_COLOR_HSV){
+            int hue        = (int)_data["d"]["p"]["data"]["value"]["h"];
+            int saturation = (int)_data["d"]["p"]["data"]["value"]["s"];
+            int value      = (int)_data["d"]["p"]["data"]["value"]["v"];
+            muzzley_handle_lighting_write_HSV_request(lampManager, component, hue, saturation, value);
+        }
+
+        if(property==PROPERTY_COLOR_HSVT){
+            int hue        = (int)_data["d"]["p"]["data"]["value"]["h"];
+            int saturation = (int)_data["d"]["p"]["data"]["value"]["s"];
+            int value      = (int)_data["d"]["p"]["data"]["value"]["v"];
+            int colortemp  = (int)_data["d"]["p"]["data"]["value"]["t"];
+            muzzley_handle_lighting_write_HSVT_request(lampManager, component, hue, saturation, value, colortemp);
         }
     }
     return true;
@@ -3017,16 +3261,17 @@ void alljoyn_status_info(){
 
 void cmd_line_parser_help(){
     cout << "Alljoyn-Muzzley Connector CMD line help:" << endl << flush;
-    cout << "--api_endpointhost             set the Muzzley API Endpointhost" << endl << flush;
-    cout << "--api_port                     set the Muzzley API Port number" << endl << flush;
-    cout << "--manager_endpointhost         set the Muzzley Manager Endpointhost" << endl << flush;
-    cout << "--manager_port                 set the Muzzley Manager Port number" << endl << flush;
-    cout << "--lighting_profileid           set the Muzzley Lighting Profileid" << endl << flush;
-    cout << "--lighting_app_token           set the Muzzley Lighting AppToken" << endl << flush;
-    cout << "--plugs_profileid              set the Muzzley Plugs Profileid" << endl << flush;
-    cout << "--plugs_app_token              set the Muzzley Plugs AppToken" << endl << flush;        
-    cout << "--network_lighting_port        set the Muzzley Lighting UPNP Port number" << endl << flush;
-    cout << "--network_plugs_port           set the Muzzley PLugs UPNP Port number" << endl << flush;
+    cout << "--api-endpointhost             set the Muzzley API Endpointhost" << endl << flush;
+    cout << "--api-port                     set the Muzzley API Port number" << endl << flush;
+    cout << "--manager-endpointhost         set the Muzzley Manager Endpointhost" << endl << flush;
+    cout << "--manager-port                 set the Muzzley Manager Port number" << endl << flush;
+    cout << "--lighting-profileid           set the Muzzley Lighting Profileid" << endl << flush;
+    cout << "--lighting-app-token           set the Muzzley Lighting AppToken" << endl << flush;
+    cout << "--plugs-profileid              set the Muzzley Plugs Profileid" << endl << flush;
+    cout << "--plugs-app-token              set the Muzzley Plugs AppToken" << endl << flush;        
+    cout << "--network-lighting-port        set the Muzzley Lighting UPNP Port number" << endl << flush;
+    cout << "--network-plugs-port           set the Muzzley Plugs UPNP Port number" << endl << flush;
+    cout << "--color-mode                   set the Muzzley Interface Color Mode" << endl << flush;
     cout << "--help                         show this help text" << endl << endl << flush;
 }
 
@@ -3041,6 +3286,7 @@ void muzzley_print_status_info(){
     cout << "LIGHTING APPTOKEN: " << muzzley_lighting_apptoken << endl << flush;
     cout << "PLUGS PROFILEID: " << muzzley_plugs_profileid << endl << flush;
     cout << "PLUGS APPTOKEN: " << muzzley_plugs_apptoken << endl << endl << flush;
+    cout << "COLOR MODE: " << muzzley_color_mode << endl << flush;
 }
 
 int main(int argc, char* argv[]){
@@ -3062,6 +3308,7 @@ int main(int argc, char* argv[]){
     muzzley::Client _muzzley_lighting_client;
 
     //Set default Muzzley tokens
+    muzzley_color_mode=PROPERTY_COLOR_HSV;
     muzzley_core_endpointhost=MUZZLEY_DEFAULT_CORE_ENDPOINTHOST;
     muzzley_api_endpointhost=MUZZLEY_DEFAULT_API_ENDPOINTHOST;
     muzzley_manager_endpointhost=MUZZLEY_DEFAULT_MANAGER_ENDPOINTHOST;
@@ -3082,32 +3329,43 @@ int main(int argc, char* argv[]){
     //Parse cmd line custom Muzzley tokens
     if(argc>1){
         for (int i = 1; i < argc; i++) {
-            if (strcmp(argv[i],"--core_endpointhost")==0) {
+            if (strcmp(argv[i],"--core-endpointhost")==0) {
                 muzzley_core_endpointhost = argv[i + 1];
                 _muzzley_lighting_client.setEndpointHost(muzzley_core_endpointhost);
                 _muzzley_plugs_client.setEndpointHost(muzzley_core_endpointhost);
-            } else if (strcmp(argv[i], "--api_endpointhost")==0) {
+            } else if (strcmp(argv[i], "--api-endpointhost")==0) {
                 muzzley_api_endpointhost = argv[i + 1];
-            } else if (strcmp(argv[i], "--api_port")==0) {
+            } else if (strcmp(argv[i], "--api-port")==0) {
                 muzzley_api_port = atoi(argv[i + 1]);
-            } else if (strcmp(argv[i], "--manager_endpointhost")==0) {
+            } else if (strcmp(argv[i], "--manager-endpointhost")==0) {
                 muzzley_manager_endpointhost = argv[i + 1];
-            } else if (strcmp(argv[i], "--manager_port")==0) {
+            } else if (strcmp(argv[i], "--manager-port")==0) {
                 muzzley_manager_port = atoi(argv[i + 1]);
-            } else if (strcmp(argv[i], "--lighting_profileid")==0) {
+            } else if (strcmp(argv[i], "--lighting-profileid")==0) {
                 muzzley_lighting_profileid = argv[i + 1];
-            } else if (strcmp(argv[i], "--lighting_app_token")==0) {
+            } else if (strcmp(argv[i], "--lighting-app-token")==0) {
                 muzzley_lighting_apptoken = argv[i + 1];
-            } else if (strcmp(argv[i], "--plugs_profileid")==0) {
+            } else if (strcmp(argv[i], "--plugs-profileid")==0) {
                 muzzley_plugs_profileid = argv[i + 1];
-            } else if (strcmp(argv[i], "--plugs_app_token")==0) {
+            } else if (strcmp(argv[i], "--plugs-app-token")==0) {
                 muzzley_plugs_apptoken = argv[i + 1];
-            } else if (strcmp(argv[i], "--network_interface")==0) {
+            } else if (strcmp(argv[i], "--network-interface")==0) {
                 muzzley_network_interface = argv[i + 1];
-            } else if (strcmp(argv[i], "--network_lighting_port")==0) {
+            } else if (strcmp(argv[i], "--network-lighting-port")==0) {
                 muzzley_network_lighting_port = atoi(argv[i + 1]);
-            } else if (strcmp(argv[i], "--network_plugs_port")==0) {
+            } else if (strcmp(argv[i], "--network-plugs-port")==0) {
                 muzzley_network_plugs_port = atoi(argv[i + 1]);
+            } else if (strcmp(argv[i], "--color-mode")==0) {
+                if(strcmp(argv[i + 1], PROPERTY_COLOR_RGB)==0){
+                	muzzley_color_mode=PROPERTY_COLOR_RGB;
+                } else if (strcmp(argv[i + 1], PROPERTY_COLOR_HSV)==0){
+                	muzzley_color_mode=PROPERTY_COLOR_HSV;
+                } else if (strcmp(argv[i + 1], PROPERTY_COLOR_HSVT)==0){
+                    muzzley_color_mode=PROPERTY_COLOR_HSVT;
+                } else {
+                	cout << "Unknown color mode. Using HSV as default." << endl << flush;
+                	muzzley_color_mode=PROPERTY_COLOR_HSV;
+                }
             } else if (strcmp(argv[i], "--help")==0) {
                 cmd_line_parser_help();
                 exit(0);
