@@ -148,8 +148,8 @@
 #define PROPERTY_POWER "power"
 #define PROPERTY_ENERGY "energy"
 
-#define MUZZLEY_LIGHTING_FRIENDLYNAME "Alljoyn Lighting"
-#define MUZZLEY_PLUGS_FRIENDLYNAME "Alljoyn Plugs"
+#define MUZZLEY_LIGHTING_FRIENDLYNAME "My Alljoyn Bulbs"
+#define MUZZLEY_PLUGS_FRIENDLYNAME "My Alljoyn Plugs"
 #define MUZZLEY_MANUFACTURER "Muzzley"
 #define MUZZLEY_MANUFACTURER_URL "www.muzzley.com"
 #define MUZZLEY_MODELDESCRIPTION "Muzzley Alljoyn Connector with UPnP Support"
@@ -810,16 +810,18 @@ bool muzzley_lighting_connect_API(){
     _req->header("Accept", "*/*");
 
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
     _socket >> _rep;
 
+    _socket.close();
+
     if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
         // Print the value of a message header
         muzzley::JSONObj _url = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
-        cout << endl << "Parsed Muzzley API Reply:" << endl << flush;
+        cout << "Parsed Muzzley API Reply:" << endl << flush;
         cout << "id: " << (string)_url["id"] << endl << flush;
         cout << "uuid: " << (string)_url["uuid"] << endl << flush;
         cout << "name: " << (string)_url["name"] << endl << flush;
@@ -828,10 +830,10 @@ bool muzzley_lighting_connect_API(){
         string str_url=(string)_url["deviceHandlerUrl"];
 
     }else{
-        cout << "Error: " << _rep->status() << endl << flush;
+        cout << "Error: " << _rep->status() << endl << flush; 
+        return false;
     }
 
-    _socket.close();
     return true;
 }
 
@@ -1237,16 +1239,18 @@ bool muzzley_plugs_connect_API(){
     _req->header("Accept", "*/*");
 
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
     _socket >> _rep;
 
+    _socket.close();
+
     if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
         // Print the value of a message header
         muzzley::JSONObj _url = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
-        cout << endl << "Parsed Muzzley API Reply:" << endl << flush;
+        cout << "Parsed Muzzley API Reply:" << endl << flush;
         cout << "id: " << (string)_url["id"] << endl << flush;
         cout << "uuid: " << (string)_url["uuid"] << endl << flush;
         cout << "name: " << (string)_url["name"] << endl << flush;
@@ -1255,10 +1259,10 @@ bool muzzley_plugs_connect_API(){
         string str_url=(string)_url["deviceHandlerUrl"];
 
     }else{
-        cout << "Error: " << _rep->status() << endl << flush;
+        cout << "Error: " << _rep->status() << endl << flush; 
+        return false;
     }
 
-    _socket.close();
     return true;
 }
 
@@ -1380,7 +1384,7 @@ bool muzzley_replace_plugs_components(){
 
     _req->body(_str_replace_components);
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
@@ -1440,7 +1444,7 @@ bool muzzley_add_plugs_component(string plug_id, string plug_name){
 
     _req->body(_str_add_component);
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
@@ -1501,7 +1505,7 @@ bool muzzley_add_plugs_components(string plug_id, string plug_name){
 
     _req->body(_str_add_components);
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
@@ -1564,7 +1568,7 @@ bool muzzley_remove_plugs_component(string plug_id, string plug_name){
 
     _req->body(_str_del_components);
     _socket << _req << flush;
-    cout << _req << endl << flush;
+    cout << endl << _req << endl << flush;
 
     // Instantiate an HTTP response object
     muzzley::HTTPRep _rep;
@@ -2755,7 +2759,7 @@ public:
     }
 
     void LampStateChangedCB(const LSFString& lampID, const LampState& lampState) {
-        printf("\n%s:\nlampID: %s\nlampState: \n%s", __func__, lampID.data(), lampState.c_str());
+        printf("\n%s:\nlampID: %s\nlampState: \n\n%s\n\n", __func__, lampID.data(), lampState.c_str());
         muzzley_parseLampState(lampID, lampState, this->_client);
     }
 
@@ -3261,6 +3265,7 @@ void alljoyn_status_info(){
 
 void cmd_line_parser_help(){
     cout << "Alljoyn-Muzzley Connector CMD line help:" << endl << flush;
+    cout << "--core-endpointhost            set the Muzzley Core Endpointhost" << endl << flush;
     cout << "--api-endpointhost             set the Muzzley API Endpointhost" << endl << flush;
     cout << "--api-port                     set the Muzzley API Port number" << endl << flush;
     cout << "--manager-endpointhost         set the Muzzley Manager Endpointhost" << endl << flush;
@@ -3285,8 +3290,8 @@ void muzzley_print_status_info(){
     cout << "LIGHTING PROFILEID: " << muzzley_lighting_profileid << endl << flush;
     cout << "LIGHTING APPTOKEN: " << muzzley_lighting_apptoken << endl << flush;
     cout << "PLUGS PROFILEID: " << muzzley_plugs_profileid << endl << flush;
-    cout << "PLUGS APPTOKEN: " << muzzley_plugs_apptoken << endl << endl << flush;
-    cout << "COLOR MODE: " << muzzley_color_mode << endl << flush;
+    cout << "PLUGS APPTOKEN: " << muzzley_plugs_apptoken << endl << flush;
+    cout << "COLOR MODE: " << muzzley_color_mode << endl << endl << flush;
 }
 
 int main(int argc, char* argv[]){
@@ -3455,8 +3460,8 @@ int main(int argc, char* argv[]){
         _s1.setNamespace(MUZZLEY_WORKSPACE);
         _s1.setProfile(muzzley_lighting_profileid);
         _s1.setChannel(muzzley_lighting_deviceKey);
-        _s1.setComponent("*");
-        _s1.setProperty("*");
+        //_s1.setComponent("*");
+        //_s1.setProperty("*");
 
         _muzzley_lighting_client.on(muzzley::Published, _s1, [&lampManager] (muzzley::Message& _data, muzzley::Client& _muzzley_lighting_client) -> bool {
             //_data->prettify(cout);
@@ -3474,17 +3479,17 @@ int main(int argc, char* argv[]){
         return true;
     });
 
-    _muzzley_plugs_client.on(muzzley::AppLoggedIn,[] (muzzley::Message& _data, muzzley::Client& _muzzley_lighting_client) -> bool{
+    _muzzley_plugs_client.on(muzzley::AppLoggedIn,[] (muzzley::Message& _data, muzzley::Client& _muzzley_plugs_client) -> bool{
         cout << "Plugs logged in with id " << _data["d"]["activityId"] << endl << flush;
        
         muzzley::Subscription _s1;
         _s1.setNamespace(MUZZLEY_WORKSPACE);
         _s1.setProfile(muzzley_plugs_profileid);
         _s1.setChannel(muzzley_plugs_deviceKey);
-        _s1.setComponent("*");
-        _s1.setProperty("*");
+        //_s1.setComponent("*");
+        //_s1.setProperty("*");
 
-        _muzzley_plugs_client.on(muzzley::Published, _s1, [] (muzzley::Message& _data, muzzley::Client& _muzzley_lighting_client) -> bool {
+        _muzzley_plugs_client.on(muzzley::Published, _s1, [] (muzzley::Message& _data, muzzley::Client& _muzzley_plugs_client) -> bool {
             //_data->prettify(cout);
             //cout << endl << flush;
             try{
@@ -3499,21 +3504,34 @@ int main(int argc, char* argv[]){
         return true;
     });
     
+    _muzzley_lighting_client.on(muzzley::Reconnect, [] (muzzley::Message& _data, muzzley::Client& _muzzley_lighting_client) -> bool {
+        cout << "Reconnecting Muzzley Lighting Client..." << endl << flush;
+        return true;
+    });
+
+    _muzzley_plugs_client.on(muzzley::Reconnect, [] (muzzley::Message& _data, muzzley::Client& _muzzley_plugs_client) -> bool {
+        cout << "Reconnecting Muzzley Plugs Client..." << endl << flush;
+        return true;
+    });
+
     try{
         // Waits for global manager lighting devicekey
         while(!muzzley_lighting_registered){
-            muzzley_lighting_connect_API();
-            muzzley_lighting_registered=muzzley_lighting_connect_manager();
-            printf("Waiting for Muzzley lighting registration...\n");
-            sleep(1);
+            cout << endl << "Waiting for Muzzley lighting registration..." << endl << flush;
+            if(muzzley_lighting_connect_API()==true){
+                muzzley_lighting_registered=muzzley_lighting_connect_manager();
+                sleep(1);
+            }
+            
         }
 
         // Waits for global manager plugs devicekey
         while(!muzzley_plugs_registered){
-            muzzley_plugs_connect_API();
-            muzzley_plugs_registered=muzzley_plugs_connect_manager();     
-            printf("Waiting for Muzzley plugs registration...\n");
-            sleep(1);
+            cout << endl << "Waiting for Muzzley plugs registration..." << endl << flush;
+            if(muzzley_plugs_connect_API()==true){
+                muzzley_plugs_registered=muzzley_plugs_connect_manager();
+                sleep(1);
+            }
         }
 
         //Connects the application to the Muzzley server.
