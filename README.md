@@ -302,7 +302,7 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 
 > 2 - Start the Alljoyn-Muzzley-Connector. (If it does not start, delete the “muzzley_semaphore.txt” file, on the same folder.)
 
-> 3 - Open the Muzzley app on the phone and add the channel using the “+”. (Remove it first, if the channel has been already added before. To avoid the “error:417”, the channel must be added on the phone trying to add new components.)
+> 3 - Open the Muzzley app on the phone and add the channel using the “+”. (Remove it first, if the channel has been already added before. To avoid the “error:417”, the channel must be added on the phone before trying to add new components.)
 
 > 4 - Open the Luminaire App on one Android phone connected to the same network, and enable the controller service. (The Muzzley app must be run on a different phone.)
 
