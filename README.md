@@ -141,22 +141,22 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 
 6) Update the feed information:
 
-> ./scripts/feeds update -a
+> $ ./scripts/feeds update -a
 
     
 7) Add the the packages from the feeds to build system (luci interface is not needed but recommended to configure the router using a web interface):
 
-> ./scripts/feeds install -a -p alljoyn
+> $ ./scripts/feeds install -a -p alljoyn
 
-> ./scripts/feeds install libgupnp
+> $ ./scripts/feeds install libgupnp
 
-> ./scripts/feeds install libgssdp
+> $ ./scripts/feeds install libgssdp
 
-> ./scripts/feeds install -a -p luci
+> $ ./scripts/feeds install -a -p luci
 
 8) Enable AllJoyn in the build:
 
-> make menuconfig
+> $ make menuconfig
 
 ```
      Networking --->
@@ -186,47 +186,47 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
           
 ```
 9) Make the firmware image including the correspondent configuration using the command:
-> make
+> $ make
 
 10) Flash it in the router firmware and wait for reboot.
 
 11) SSH to your router with two different shells and execute the following commands on each one to test the AllJoyn framework:
-> /usr/bin/AboutService
+> $ /usr/bin/AboutService
 
-> /usr/bin/AboutClient
+> $ /usr/bin/AboutClient
 
 12) Prepare the OpenWRT toolchain to be able to cross-compile the Muzzley library and the AllJoyn-Muzzley connector for the specific router hardware target.
 
-> export PATH=$PATH:$HOME/openwrt/staging_dir/toolchain-mips_34kc_gcc-4.8-linaro_uClibc-0.9.33.2/bin
+> $ export PATH=$PATH:$HOME/openwrt/staging_dir/toolchain-mips_34kc_gcc-4.8-linaro_uClibc-0.9.33.2/bin
 
-> export STAGING_DIR=$HOME/openwrt/staging_dir/toolchain-mips_34kc_gcc-4.8-linaro_uClibc-0.9.33.2
+> $ export STAGING_DIR=$HOME/openwrt/staging_dir/toolchain-mips_34kc_gcc-4.8-linaro_uClibc-0.9.33.2
 
-> export AJ_ROOT="$HOME/alljoyn-muzzley"
+> $ export AJ_ROOT="$HOME/alljoyn-muzzley"
 
-> export TARGET_OS="openwrt"
+> $ export TARGET_OS="openwrt"
 
-> export TARGET_CPU="openwrt"
+> $ export TARGET_CPU="openwrt"
 
-> export AJ_DIST="$AJ_ROOT/core/alljoyn/build/$TARGET_OS/$TARGET_CPU/debug/dist"
+> $ export AJ_DIST="$AJ_ROOT/core/alljoyn/build/$TARGET_OS/$TARGET_CPU/debug/dist"
 
-> export OPENWRT_BASE="$HOME/openwrt"
+> $ export OPENWRT_BASE="$HOME/openwrt"
 
-> export OPENWRT_TOOLCHAIN_BASE=$OPENWRT_BASE/staging_dir/toolchain-mips_34kc_gcc-4.8-linaro_uClibc-0.9.33.2/
+> $ export OPENWRT_TOOLCHAIN_BASE=$OPENWRT_BASE/staging_dir/toolchain-mips_34kc_gcc-4.8-linaro_uClibc-0.9.33.2/
 
-> export OPENWRT_TARGET_BASE=$OPENWRT_BASE/staging_dir/target-mips_34kc_uClibc-0.9.33.2/
+> $ export OPENWRT_TARGET_BASE=$OPENWRT_BASE/staging_dir/target-mips_34kc_uClibc-0.9.33.2/
 
-> export TARGET=mips-openwrt-linux-uclibc
+> $ export TARGET=mips-openwrt-linux-uclibc
 
 
 13) Cross-compile Muzzley Library to OpenWRT.
 
-> autoreconf -fi
+> $ autoreconf -fi
 
-> ./configure --build=x86_64-unknown-linux-gnu --host=mips-openwrt-linux-uclibc --prefix=$HOME/openwrt-muzzley-lib CXXFAGS="-std=c++0x" --enable-http --enable-logs
+> $ ./configure --build=x86_64-unknown-linux-gnu --host=mips-openwrt-linux-uclibc --prefix=$HOME/openwrt-muzzley-lib CXXFAGS="-std=c++0x" --enable-http --enable-logs
 
-> make CC=mips-openwrt-linux-uclibc-gcc LD=mips-openwrt-linux-uclibc-ld
+> $ make CC=mips-openwrt-linux-uclibc-gcc LD=mips-openwrt-linux-uclibc-ld
 
-> make install
+> $ make install
 
 
 14) Copy the compiled Muzzley library to the /usr/lib folder on the OpenWRT toolchain folder.
@@ -251,7 +251,7 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 
 16) Cross-compile AllJoyn-Muzzley Connector to OpenWRT.
 
-> scons V=1 ICE=off BR=on BT=off WS=off CPU=openwrt OS=openwrt BINDINGS="cpp" SERVICES="about,notification,controlpanel,config,onboarding,sample_apps" TARGET_CFLAGS="-Os -pipe -mips32r2 -mtune=74kc -fPIC -fno-caller-saves -fhonour-copts -Wno-error=unused-but-set-variable -msoft-float" "TARGET_CC=$TARGET-gcc" "TARGET_CXX=$TARGET-g++" "TARGET_AR=$TARGET-ar" "TARGET_RANLIB=$TARGET-ranlib" "TARGET_LINK=$TARGET-gcc" "TARGET_CPPFLAGS=-I$OPENWRT_TARGET_BASE/usr/include -I$OPENWRT_TARGET_BASE/include -I$OPENWRT_TOOLCHAIN_BASE/usr/include -I$OPENWRT_TOOLCHAIN_BASE/include" "TARGET_PATH=$OPENWRT_TOOLCHAIN_BASE/bin:$OPENWRT_BASE/staging_dir/host/bin:$PATH" "STAGING_DIR=$OPENWRT_TARGET_BASE" "TARGET_LINKFLAGS=-L$OPENWRT_TARGET_BASE/usr/lib" "CXXFLAGS=$CXXFLAGS -I$AJ_DIST/cpp/inc -I$AJ_DIST/about/inc -I$AJ_DIST/services_common/inc -I$AJ_DIST/notification/inc -I$AJ_DIST/controlpanel/inc -I$AJ_DIST/services_common/inc" "LDFLAGS=$LDFLAGS -L$AJ_DIST/cpp/lib -L$AJ_DIST/about/lib -L$AJ_DIST/services_common/lib -L$AJ_DIST/notification/lib -L$AJ_DIST/controlpanel/lib"
+> $ scons V=1 ICE=off BR=on BT=off WS=off CPU=openwrt OS=openwrt BINDINGS="cpp" SERVICES="about,notification,controlpanel,config,onboarding,sample_apps" TARGET_CFLAGS="-Os -pipe -mips32r2 -mtune=74kc -fPIC -fno-caller-saves -fhonour-copts -Wno-error=unused-but-set-variable -msoft-float" "TARGET_CC=$TARGET-gcc" "TARGET_CXX=$TARGET-g++" "TARGET_AR=$TARGET-ar" "TARGET_RANLIB=$TARGET-ranlib" "TARGET_LINK=$TARGET-gcc" "TARGET_CPPFLAGS=-I$OPENWRT_TARGET_BASE/usr/include -I$OPENWRT_TARGET_BASE/include -I$OPENWRT_TOOLCHAIN_BASE/usr/include -I$OPENWRT_TOOLCHAIN_BASE/include" "TARGET_PATH=$OPENWRT_TOOLCHAIN_BASE/bin:$OPENWRT_BASE/staging_dir/host/bin:$PATH" "STAGING_DIR=$OPENWRT_TARGET_BASE" "TARGET_LINKFLAGS=-L$OPENWRT_TARGET_BASE/usr/lib" "CXXFLAGS=$CXXFLAGS -I$AJ_DIST/cpp/inc -I$AJ_DIST/about/inc -I$AJ_DIST/services_common/inc -I$AJ_DIST/notification/inc -I$AJ_DIST/controlpanel/inc -I$AJ_DIST/services_common/inc" "LDFLAGS=$LDFLAGS -L$AJ_DIST/cpp/lib -L$AJ_DIST/about/lib -L$AJ_DIST/services_common/lib -L$AJ_DIST/notification/lib -L$AJ_DIST/controlpanel/lib"
 
 17) Replace the AllJoyn library installed on the router (14.06) with the one cross-compiled with the previous command (14.12) .
 
@@ -311,3 +311,21 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 > 6 - Check if the lights can be controlled using the "LSF Sample App", and the plugs or with with the "Alljoyn On" application.
 
 > 7 - Open the Muzzley application on the phone and start to interact with your devices.
+
+22) Command line options:
+
+| Command | Description |
+| ------------- | ----------- |
+| --core-endpointhost | set the Muzzley Core Endpointhost |
+| --api-endpointhost | set the Muzzley API Endpointhost |
+| --api-port | set the Muzzley API Port number |
+| --manager-endpointhost | set the Muzzley Manager Endpointhost |
+| --manager-port | set the Muzzley Manager Port number |
+| --lighting-profileid | set the Muzzley Lighting Profileid |
+| --lighting-app-token | set the Muzzley Lighting AppToken |
+| --plugs-profileid | set the Muzzley Plugs Profileid |
+| --plugs-app-token | set the Muzzley Plugs AppToken |
+| --network-lighting-port | set the Muzzley Lighting UPNP Port number |
+| --network-plugs-port | set the Muzzley Plugs UPNP Port number |
+| --color-mode | set the Muzzley Interface Color Mode |
+| --help | show this help text |
