@@ -314,6 +314,8 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 
 22) Command line options:
 
+> The following list of options is only used for development and troubleshooting purposes. To connect with the Muzzley cloud, all default values are already being applied, and don’t need any change.
+
 | Command | Description |
 | ------------- | ----------- |
 | --core-endpointhost | set the Muzzley Core Endpointhost |
