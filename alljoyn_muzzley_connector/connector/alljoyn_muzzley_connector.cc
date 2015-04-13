@@ -586,7 +586,7 @@ void muzzley_plug_vector_print(){
     try{
         cout << endl << "PlugList:" << endl << flush;
         for (unsigned int i = 0; i < plug_vec.size(); i++){
-            cout << endl << "Pos#: " << i << " of# : " << req_vec.size() << endl << flush;
+            cout << endl << "Pos#: " << i+1 << "/" << plug_vec.size() << endl << flush;
             cout << "id: " << get<0>(plug_vec[i]) << " Name: " << get<1>(plug_vec[i]) << endl << flush;
         }
         cout << "---END---" << endl << endl << flush;
@@ -595,16 +595,25 @@ void muzzley_plug_vector_print(){
     }
 }
 
+
+void print_request_pos(int pos){
+    double req_duration = difftime(time(0), get<4>(req_vec[pos]));
+    cout << "Request#: " << pos+1 << "/" << req_vec.size() << endl << flush;
+    cout << "Component: " << get<0>(req_vec[pos]) << endl << flush;
+    cout << "Property: " << get<1>(req_vec[pos]) << endl << flush;
+    cout << "CID: " << get<2>(req_vec[pos]) << endl << flush;
+    cout << "T: " << get<3>(req_vec[pos]) << endl << flush;
+    cout << "Time: " << get<4>(req_vec[pos]) << endl << flush;
+    cout << "Type: " << get<5>(req_vec[pos]) << endl << flush;
+    cout << "Lived: " << req_duration << " sec" << endl << endl << flush;           
+}
+
 void print_request_vector(){
+    cout << endl << "---Muzzley Read Requests:---" << endl << endl << flush;
     for (unsigned int i = 0; i < req_vec.size(); i++){
-        cout << endl << "Vector Pos#: " << i << " of# : " << req_vec.size() << endl << flush;
-        cout << "Component: " << get<0>(req_vec[i]) << endl << flush;
-        cout << "Property: " << get<1>(req_vec[i]) << endl << flush;
-        cout << "CID: " << get<2>(req_vec[i]) << endl << flush;
-        cout << "T: " << get<3>(req_vec[i]) << endl << flush;
-        cout << "Time: " << get<4>(req_vec[i]) << endl << flush;
-        cout << "Type: " << get<5>(req_vec[i]) << endl << endl << flush;
+        print_request_pos(i);
     }
+    cout << "---END---" << endl << endl << flush;
 }
 
 int get_request_vector_pos(string component, string property){
@@ -656,10 +665,10 @@ bool delete_request_vector_pos(int pos){
 bool muzzley_clean_request_vector(){
     for (unsigned int i = 0; i < req_vec.size(); i++){
         double req_duration = difftime(time(0), get<4>(req_vec[i]));
-        cout << "Muzzley read request#: " << i << " duration: " << req_duration << endl << endl << flush;
         if(req_duration>MUZZLEY_READ_REQUEST_TIMEOUT){
+            cout << endl << "Erased muzzley read request (timeout):" << endl << flush;
+            print_request_pos(i);
             req_vec.erase(req_vec.begin()+i);
-            cout << "Erased muzzley read request#: " << i << " (timeout!)" << endl << flush;
         }
     }
     return true;
@@ -710,6 +719,18 @@ string muzzley_lamplist_get_lampname(string lampID){
         }
     }
     return MUZZLEY_UNKNOWN_NAME;
+}
+
+bool muzzley_lamplist_del_lamp(string lampID){
+   for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+        for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
+            if(strcmp(local_it->first.c_str(), lampID.c_str())==0){
+                muzzley_lamplist.erase(lampID);
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void muzzley_lamplist_print(){
@@ -1020,7 +1041,7 @@ bool muzzley_add_lighting_component(LSFString lampID, LSFString lampName){
        
     //set HTTP request server path
     _req->url(MUZZLEY_MANAGER_COMPONENTS_URL);
-    _req->header("Host", muzzley_api_endpointhost);
+    _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
@@ -2005,7 +2026,6 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
             cout  << "Published brightness to muzzley sucessfully" << endl << flush;
         }
 
-
         double        hue_double = hue_int;
         double saturation_double = color_remap_double(saturation_int, COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, COLOR_DOUBLE_MAX);
                     value_double = color_remap_double(brightness_int, COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, COLOR_DOUBLE_MAX);
@@ -2048,8 +2068,10 @@ bool muzzley_handle_lighting_write_status_request(LampManager& lampManager, stri
     try{
         status = lampManager.TransitionLampStateOnOffField(component, bool_status);
         if(status != LSF_OK)
-            cout << "LampManager Error: " << status << endl << flush;
-           return true;
+            cout << "LampManager Error!" << endl << flush;
+        if(status == 1)
+            cout << "No lighting controller service running!" << endl << flush;
+        return true;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
@@ -2067,7 +2089,9 @@ bool muzzley_handle_lighting_write_brightness_request(LampManager& lampManager, 
 
         status = lampManager.TransitionLampStateBrightnessField(component, long_brightness);
         if(status != LSF_OK)
-            cout << "LampManager Error: " << status << endl << flush;
+            cout << "LampManager Error!" << endl << flush;
+        if(status == 1)
+            cout << "No lighting controller service running!" << endl << flush;
         return true;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -2104,7 +2128,9 @@ bool muzzley_handle_lighting_write_RGB_request(LampManager& lampManager, string 
         LampState state(true, long_hue, long_saturation, COLOR_TEMPERATURE_DEFAULT_DEC, long_brightness);
         status = lampManager.TransitionLampState(component, state);
         if(status != LSF_OK)
-            cout << "LampManager Error: " << status << endl << flush;
+            cout << "LampManager Error!" << endl << flush;
+        if(status == 1)
+            cout << "No lighting controller service running!" << endl << flush;
         return true; 
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -2135,7 +2161,9 @@ bool muzzley_handle_lighting_write_HSV_request(LampManager& lampManager, string 
         LampState state(true, long_hue, long_saturation, COLOR_TEMPERATURE_DEFAULT_DEC, long_brightness);
         status = lampManager.TransitionLampState(component, state);
         if(status != LSF_OK)
-            cout << "LampManager Error: " << status << endl << flush;
+            cout << "LampManager Error!" << endl << flush;
+        if(status == 1)
+            cout << "No lighting controller service running!" << endl << flush;
         return true; 
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -2170,7 +2198,9 @@ bool muzzley_handle_lighting_write_HSVT_request(LampManager& lampManager, string
         LampState state(true, long_hue, long_saturation, long_colortemp, long_brightness);
         status = lampManager.TransitionLampState(component, state);
         if(status != LSF_OK)
-            cout << "LampManager Error: " << status << endl << flush;
+            cout << "LampManager Error!" << endl << flush;
+        if(status == 1)
+            cout << "No lighting controller service running!" << endl << flush;
         return true; 
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -2185,7 +2215,9 @@ bool muzzley_handle_lighting_read_request(LampManager& lampManager, string compo
         req_vec.push_back(make_tuple(component, property, cid, t, tm, DEVICE_BULB));
         status = lampManager.GetLampState(component);
         if(status != LSF_OK)
-            cout << "LampManager Error: " << status << endl << flush;
+            cout << "LampManager Error!" << endl << flush;
+        if(status == 1)
+            cout << "No lighting controller service running!" << endl << flush;
         muzzley_clean_request_vector();
         return true;
     }catch(exception& e){
@@ -2230,7 +2262,6 @@ bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT
             int value      = (int)_data["d"]["p"]["data"]["value"]["v"];
             muzzley_handle_lighting_write_HSV_request(lampManager, component, hue, saturation, value);
         }
-
         if(property==PROPERTY_COLOR_HSVT){
             int hue        = (int)_data["d"]["p"]["data"]["value"]["h"];
             int saturation = (int)_data["d"]["p"]["data"]["value"]["s"];
@@ -2768,12 +2799,12 @@ public:
         LSFStringList::const_iterator it = lampIDs.begin();
         uint8_t count = 1;
         for (; it != lampIDs.end(); ++it) {
-            printf("\n(%d)%s", count, (*it).data());
+            printf("\n(%d)%s\n", count, (*it).data());
             count++;
             muzzley_lamplist[(*it).data()]=muzzley_lamplist_get_lampname((*it).data());
-            muzzley_add_lighting_components(lampIDs);
         }
         printf("\n");
+        muzzley_add_lighting_components(lampIDs);
         lampList.clear();
         lampList = lampIDs;
     }
@@ -2783,14 +2814,15 @@ public:
         LSFStringList::const_iterator it = lampIDs.begin();
         uint8_t count = 1;
         for (; it != lampIDs.end(); ++it) {
-            printf("\n(%d)%s", count, (*it).data());
+            printf("\n(%d)%s\n", count, (*it).data());
+            muzzley_lamplist_del_lamp((*it).data());
             count++;
-            muzzley_remove_lighting_components(lampIDs);
         }
+        muzzley_remove_lighting_components(lampIDs);
         lampList.clear();
         lampList = lampIDs;
     }
-    
+
 };
 
 
@@ -3263,6 +3295,12 @@ void alljoyn_status_info(){
     }
 }
 
+void muzzley_read_request_cleaner(){
+    while(true){
+        muzzley_clean_request_vector();
+    }
+}
+
 void cmd_line_parser_help(){
     cout << "Alljoyn-Muzzley Connector CMD line help:" << endl << flush;
     cout << "--core-endpointhost            set the Muzzley Core Endpointhost" << endl << flush;
@@ -3382,7 +3420,7 @@ int main(int argc, char* argv[]){
         }
     }
     
-      muzzley_print_status_info();
+    muzzley_print_status_info();
   
     //Initialize alljoyn bus ("ClientTest")
     bus = new BusAttachment("MuzzleyConnector", true);
@@ -3549,6 +3587,10 @@ int main(int argc, char* argv[]){
         //Lists all alljoyn devices periodically
         std::thread alljoyn_status_thread(alljoyn_status_info);
         alljoyn_status_thread.detach();
+
+        //Cleans all timmed out muzzley read requstes
+        std::thread muzzley_read_request_cleaner_thread(muzzley_read_request_cleaner);
+        muzzley_read_request_cleaner_thread.detach();
 
         //Get all Available LampsIDs for upnp server
         status = lampManager.GetAllLampIDs();
