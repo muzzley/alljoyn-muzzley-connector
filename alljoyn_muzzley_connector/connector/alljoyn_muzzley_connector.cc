@@ -105,8 +105,8 @@
 #define MUZZLEY_DEFAULT_API_PORT 80
 #define MUZZLEY_DEFAULT_MANAGER_PORT 80
 
-#define MUZZLEY_MANAGER_REGISTER_URL "/deviceapp/register"
-#define MUZZLEY_MANAGER_COMPONENTS_URL "/deviceapp/components"
+#define MUZZLEY_DEFAULT_MANAGER_REGISTER_URL "/deviceapp/register"
+#define MUZZLEY_DEFAULT_MANAGER_COMPONENTS_URL "/deviceapp/components"
 #define MUZZLEY_SEMAPHORE_FILENAME "muzzley_semaphore.txt"
 #define MUZZLEY_LIGHTING_DEVICEKEY_FILENAME "lighting_key.txt"
 #define MUZZLEY_PLUGS_DEVICEKEY_FILENAME "plugs_key.txt"
@@ -118,6 +118,22 @@
 #define MUZZLEY_BRIDGE_INFO false
 #define MUZZLEY_READ_REQUEST_TIMEOUT 30
 
+#define COLOR_WHITE "white"
+#define COLOR_SILVER "silver"
+#define COLOR_GRAY "gray"
+#define COLOR_BLACK "black"
+#define COLOR_RED "red"
+#define COLOR_MAROON "maroon"
+#define COLOR_YELLOW "yellow"
+#define COLOR_OLIVE "olive"
+#define COLOR_LIME "lime"
+#define COLOR_GREEN "green"
+#define COLOR_AQUA "aqua"
+#define COLOR_TEAL "teal"
+#define COLOR_BLUE "blue"
+#define COLOR_NAVY "navy"
+#define COLOR_FUCHSIA "fuschia"
+#define COLOR_PURPLE "purple"
 
 #define COLOR_MIN 0
 #define COLOR_MAX_UINT32 4294967296
@@ -141,6 +157,7 @@
 #define PROPERTY_COLOR_RGB "color"
 #define PROPERTY_COLOR_HSV "color-hsv"
 #define PROPERTY_COLOR_HSVT "color-hsvt"
+#define PROPERTY_COLOR_NAME "color-name"
 #define PROPERTY_BRIGHTNESS "brightness"
 #define PROPERTY_VOLTAGE "voltage"
 #define PROPERTY_CURRENT "current"
@@ -148,17 +165,17 @@
 #define PROPERTY_POWER "power"
 #define PROPERTY_ENERGY "energy"
 
-#define MUZZLEY_LIGHTING_FRIENDLYNAME "My Alljoyn Bulbs"
-#define MUZZLEY_PLUGS_FRIENDLYNAME "My Alljoyn Plugs"
-#define MUZZLEY_MANUFACTURER "Muzzley"
-#define MUZZLEY_MANUFACTURER_URL "www.muzzley.com"
-#define MUZZLEY_MODELDESCRIPTION "Muzzley Alljoyn Connector with UPnP Support"
-#define MUZZLEY_MODELNAME "Muzzley Connector 0.1"
-#define MUZZLEY_MODELNUMBER "muzzley-modelnumber"
-#define MUZZLEY_LIGHTING_UDN "muzzley-lighting-udn"
-#define MUZZLEY_PLUGS_UDN "muzzley-plugs-udn"
-#define MUZZLEY_SERIALNUMBER_LIGHTING "muzzley-lighting-serialnumber-lisbon-office-1"
-#define MUZZLEY_SERIALNUMBER_PLUGS "muzzley-plugs-serialnumber-lisbon-office-1"
+#define MUZZLEY_DEFAULT_LIGHTING_FRIENDLYNAME "My Alljoyn Bulbs"
+#define MUZZLEY_DEFAULT_LIGHTING_UDN "muzzley-lighting-udn"
+#define MUZZLEY_DEFAULT_LIGHTING_SERIALNUMBER "muzzley-lighting-serialnumber-lisbon-office-1"
+#define MUZZLEY_DEFAULT_PLUGS_FRIENDLYNAME "My Alljoyn Plugs"
+#define MUZZLEY_DEFAULT_PLUGS_UDN "muzzley-plugs-udn"
+#define MUZZLEY_DEFAULT_PLUGS_SERIALNUMBER "muzzley-plugs-serialnumber-lisbon-office-1"
+#define MUZZLEY_DEFAULT_MANUFACTURER "Muzzley"
+#define MUZZLEY_DEFAULT_MANUFACTURER_URL "www.muzzley.com"
+#define MUZZLEY_DEFAULT_MODELDESCRIPTION "Muzzley Alljoyn Connector with UPnP Support"
+#define MUZZLEY_DEFAULT_MODELNAME "Muzzley Alljoyn Connector"
+#define MUZZLEY_DEFAULT_MODELNUMBER "0.1"
 
 #define MUZZLEY_DEFAULT_NETWORK_INTERFACE "br-lan"
 #define MUZZLEY_DEFAULT_NETWORK_LIGHTING_PORT 50000
@@ -186,11 +203,28 @@ const char* muzzley_color_mode=NULL;
 const char* muzzley_core_endpointhost=NULL;
 const char* muzzley_api_endpointhost=NULL;
 const char* muzzley_manager_endpointhost=NULL;
+const char* muzzley_manager_register_url=NULL;
+const char* muzzley_manager_components_url=NULL;
 const char* muzzley_lighting_profileid=NULL;
 const char* muzzley_lighting_apptoken=NULL;
+const char* muzzley_lighting_friendlyname=NULL;
+const char* muzzley_lighting_udn=NULL;
+const char* muzzley_lighting_serialnumber=NULL;
 const char* muzzley_plugs_profileid=NULL;
 const char* muzzley_plugs_apptoken=NULL;
+const char* muzzley_plugs_friendlyname=NULL;
+const char* muzzley_plugs_udn=NULL;
+const char* muzzley_plugs_serialnumber=NULL;
 const char* muzzley_network_interface=NULL;
+const char* muzzley_manufacturer=NULL;
+const char* muzzley_manufacturer_url=NULL;
+const char* muzzley_modeldescription=NULL;
+const char* muzzley_modelname=NULL;
+const char* muzzley_modelnumber=NULL;
+
+
+string muzzley_lighting_sessionid;
+string muzzley_plugs_sessionid;
 string muzzley_lighting_macAddress;
 string muzzley_plugs_macAddress;
 string muzzley_lighting_deviceKey;
@@ -755,14 +789,14 @@ void gupnp_generate_lighting_XML(){
         responseStream << "</specVersion>\n";
         responseStream << "<device>\n";
         responseStream << "<deviceType>urn:Muzzley:device:" << muzzley_lighting_profileid << ":1</deviceType>\n";
-        responseStream << "<friendlyName>" << MUZZLEY_LIGHTING_FRIENDLYNAME << "</friendlyName>\n";
-        responseStream << "<manufacturer>" << MUZZLEY_MANUFACTURER << "</manufacturer>\n";
-        responseStream << "<manufacturerURL>" << MUZZLEY_MANUFACTURER_URL << "</manufacturerURL>\n";
-        responseStream << "<modelDescription>" << MUZZLEY_MODELDESCRIPTION << "</modelDescription>\n";
-        responseStream << "<modelName>" << MUZZLEY_MODELNAME << "</modelName>\n";
-        responseStream << "<modelNumber>" << MUZZLEY_MODELNUMBER << "</modelNumber>\n";
-        responseStream << "<UDN>uuid:" << MUZZLEY_LIGHTING_UDN << "</UDN>\n";
-        responseStream << "<serialNumber>" << MUZZLEY_SERIALNUMBER_LIGHTING << "</serialNumber>\n";
+        responseStream << "<friendlyName>" << muzzley_lighting_friendlyname << "</friendlyName>\n";
+        responseStream << "<manufacturer>" << muzzley_manufacturer << "</manufacturer>\n";
+        responseStream << "<manufacturerURL>" << muzzley_manufacturer_url << "</manufacturerURL>\n";
+        responseStream << "<modelDescription>" << muzzley_modeldescription << "</modelDescription>\n";
+        responseStream << "<modelName>" << muzzley_modelname << "</modelName>\n";
+        responseStream << "<modelNumber>" << muzzley_modelnumber << "</modelNumber>\n";
+        responseStream << "<UDN>uuid:" << muzzley_lighting_udn << "</UDN>\n";
+        responseStream << "<serialNumber>" << muzzley_lighting_serialnumber << "</serialNumber>\n";
         responseStream << "<macAddress>" << muzzley_lighting_macAddress << "</macAddress>\n";
         responseStream << "<deviceKey>" << muzzley_lighting_deviceKey << "</deviceKey>\n";
         responseStream << "<components>\n";
@@ -876,8 +910,8 @@ bool muzzley_lighting_connect_manager(){
         _json_body_part <<
             "profileId" << muzzley_lighting_profileid <<
             "macAddress" << muzzley_lighting_macAddress <<
-            "serialNumber" << MUZZLEY_SERIALNUMBER_LIGHTING <<
-            "friendlyName" << MUZZLEY_LIGHTING_FRIENDLYNAME;
+            "serialNumber" << muzzley_lighting_serialnumber <<
+            "friendlyName" << muzzley_lighting_friendlyname;
 
             if(muzzley_lighting_deviceKey!=""){
                 _json_body_part <<
@@ -892,7 +926,7 @@ bool muzzley_lighting_connect_manager(){
     ss << lenght;
 
     // set HTTP request server path
-    _req->url(MUZZLEY_MANAGER_REGISTER_URL);
+    _req->url(muzzley_manager_register_url);
     _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
@@ -977,12 +1011,12 @@ bool muzzley_replace_lighting_components(){
     ss << lenght;
 
     //set HTTP request server path
-    _req->url(MUZZLEY_MANAGER_COMPONENTS_URL);
+    _req->url(muzzley_manager_components_url);
     _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", MUZZLEY_SERIALNUMBER_LIGHTING);
+    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
 
@@ -1040,12 +1074,12 @@ bool muzzley_add_lighting_component(LSFString lampID, LSFString lampName){
     ss << lenght;
        
     //set HTTP request server path
-    _req->url(MUZZLEY_MANAGER_COMPONENTS_URL);
+    _req->url(muzzley_manager_components_url);
     _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", MUZZLEY_SERIALNUMBER_LIGHTING);
+    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
     _req->body(_str_add_component);
@@ -1105,12 +1139,12 @@ bool muzzley_add_lighting_components(LSFStringList new_lampIDs){
     ss << lenght;
       
     //set HTTP request server path
-    _req->url(MUZZLEY_MANAGER_COMPONENTS_URL);
+    _req->url(muzzley_manager_components_url);
     _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", MUZZLEY_SERIALNUMBER_LIGHTING);
+    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
 
@@ -1168,12 +1202,12 @@ bool muzzley_remove_lighting_components(LSFStringList del_lampIDs){
     ss << lenght;
 
     //set HTTP request server path
-    _req->url(MUZZLEY_MANAGER_COMPONENTS_URL);
+    _req->url(muzzley_manager_components_url);
     _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", MUZZLEY_SERIALNUMBER_LIGHTING);
+    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
 
@@ -1205,14 +1239,14 @@ void gupnp_generate_plugs_XML(){
     responseStream << "</specVersion>\n";
     responseStream << "<device>\n";
     responseStream << "<deviceType>urn:Muzzley:device:" << muzzley_plugs_profileid << ":1</deviceType>\n";
-    responseStream << "<friendlyName>" << MUZZLEY_PLUGS_FRIENDLYNAME << "</friendlyName>\n";
-    responseStream << "<manufacturer>" << MUZZLEY_MANUFACTURER << "</manufacturer>\n";
-    responseStream << "<manufacturerURL>" << MUZZLEY_MANUFACTURER_URL << "</manufacturerURL>\n";
-    responseStream << "<modelDescription>" << MUZZLEY_MODELDESCRIPTION << "</modelDescription>\n";
-    responseStream << "<modelName>" << MUZZLEY_MODELNAME << "</modelName>\n";
-    responseStream << "<modelNumber>" << MUZZLEY_MODELNUMBER << "</modelNumber>\n";
-    responseStream << "<UDN>uuid:" << MUZZLEY_PLUGS_UDN << "</UDN>\n";
-    responseStream << "<serialNumber>" << MUZZLEY_SERIALNUMBER_PLUGS << "</serialNumber>\n";
+    responseStream << "<friendlyName>" << muzzley_plugs_friendlyname << "</friendlyName>\n";
+    responseStream << "<manufacturer>" << muzzley_manufacturer << "</manufacturer>\n";
+    responseStream << "<manufacturerURL>" << muzzley_manufacturer_url << "</manufacturerURL>\n";
+    responseStream << "<modelDescription>" << muzzley_modeldescription << "</modelDescription>\n";
+    responseStream << "<modelName>" << muzzley_modelname << "</modelName>\n";
+    responseStream << "<modelNumber>" << muzzley_modelnumber << "</modelNumber>\n";
+    responseStream << "<UDN>uuid:" << muzzley_plugs_udn << "</UDN>\n";
+    responseStream << "<serialNumber>" << muzzley_plugs_serialnumber << "</serialNumber>\n";
     responseStream << "<macAddress>" << muzzley_plugs_macAddress << "</macAddress>\n";
     responseStream << "<deviceKey>" << muzzley_plugs_deviceKey << "</deviceKey>\n";
     responseStream << "<components>\n";
@@ -1305,8 +1339,8 @@ bool muzzley_plugs_connect_manager(){
         _json_body_part <<
             "profileId" << muzzley_plugs_profileid <<
             "macAddress" << muzzley_plugs_macAddress <<
-            "serialNumber" << MUZZLEY_SERIALNUMBER_PLUGS <<
-            "friendlyName" << MUZZLEY_PLUGS_FRIENDLYNAME;
+            "serialNumber" << muzzley_plugs_serialnumber <<
+            "friendlyName" << muzzley_plugs_friendlyname;
 
             if(muzzley_plugs_deviceKey!=""){
                 _json_body_part <<
@@ -1321,7 +1355,7 @@ bool muzzley_plugs_connect_manager(){
     ss << lenght;
 
     // set HTTP request server path
-    _req->url(MUZZLEY_MANAGER_REGISTER_URL);
+    _req->url(muzzley_manager_register_url);
     _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
@@ -1395,12 +1429,12 @@ bool muzzley_replace_plugs_components(){
     ss << lenght;
 
     //set HTTP request server path
-    _req->url(MUZZLEY_MANAGER_COMPONENTS_URL);
+    _req->url(muzzley_manager_components_url);
     _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", MUZZLEY_SERIALNUMBER_PLUGS);
+    _req->header("SERIALNUMBER", muzzley_plugs_serialnumber);
     _req->header("DEVICEKEY", muzzley_plugs_deviceKey);
 
     _req->body(_str_replace_components);
@@ -1455,12 +1489,12 @@ bool muzzley_add_plugs_component(string plug_id, string plug_name){
     ss << lenght;
        
     //set HTTP request server path
-    _req->url(MUZZLEY_MANAGER_COMPONENTS_URL);
+    _req->url(muzzley_manager_components_url);
     _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", MUZZLEY_SERIALNUMBER_LIGHTING);
+    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
     _req->body(_str_add_component);
@@ -1515,12 +1549,12 @@ bool muzzley_add_plugs_components(string plug_id, string plug_name){
     ss << lenght;
       
     //set HTTP request server path
-    _req->url(MUZZLEY_MANAGER_COMPONENTS_URL);
+    _req->url(muzzley_manager_components_url);
     _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", MUZZLEY_SERIALNUMBER_LIGHTING);
+    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
 
@@ -1578,12 +1612,12 @@ bool muzzley_remove_plugs_component(string plug_id, string plug_name){
     ss << lenght;
 
     //set HTTP request server path
-    _req->url(MUZZLEY_MANAGER_COMPONENTS_URL);
+    _req->url(muzzley_manager_components_url);
     _req->header("Host", muzzley_manager_endpointhost);
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", MUZZLEY_SERIALNUMBER_LIGHTING);
+    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
 
@@ -2208,6 +2242,88 @@ bool muzzley_handle_lighting_write_HSVT_request(LampManager& lampManager, string
     }
 }
 
+bool muzzley_handle_lighting_write_colorname_request(LampManager& lampManager, string component, string colorname){
+    try{
+        int hue;
+        int saturation;
+        int value;
+
+        if(strcmp(colorname.c_str(), COLOR_PURPLE)==0){
+            hue=285;
+            saturation=100;
+            value=100;
+        }else if(strcmp(colorname.c_str(), COLOR_FUCHSIA)==0){
+            hue=300;
+            saturation=53;
+            value=100;
+        }else if(strcmp(colorname.c_str(), COLOR_NAVY)==0){
+            hue=210;
+            saturation=88;
+            value=82;
+        }else if(strcmp(colorname.c_str(), COLOR_BLUE)==0){
+            hue=215;
+            saturation=100;
+            value=67;
+        }else if(strcmp(colorname.c_str(), COLOR_TEAL)==0){
+            hue=180;
+            saturation=100;
+            value=50;
+        }else if(strcmp(colorname.c_str(), COLOR_AQUA)==0){
+            hue=180;
+            saturation=100;
+            value=100;
+        }else if(strcmp(colorname.c_str(), COLOR_GREEN)==0){
+            hue=120;
+            saturation=100;
+            value=100;
+        }else if(strcmp(colorname.c_str(), COLOR_LIME)==0){
+            hue=75;
+            saturation=100;
+            value=100;
+        }else if(strcmp(colorname.c_str(), COLOR_OLIVE)==0){
+            hue=60;
+            saturation=100;
+            value=50;
+        }else if(strcmp(colorname.c_str(), COLOR_YELLOW)==0){
+            hue=60;
+            saturation=100;
+            value=100;
+        }else if(strcmp(colorname.c_str(), COLOR_MAROON)==0){
+            hue=0;
+            saturation=100;
+            value=50;
+        }else if(strcmp(colorname.c_str(), COLOR_RED)==0){
+            hue=2;
+            saturation=100;
+            value=100;
+        }else if(strcmp(colorname.c_str(), COLOR_SILVER)==0){
+            hue=0;
+            saturation=0;
+            value=75;
+        }else if(strcmp(colorname.c_str(), COLOR_GRAY)==0){
+            hue=0;
+            saturation=0;
+            value=66;
+        }else if(strcmp(colorname.c_str(), COLOR_WHITE)==0){
+            hue=0;
+            saturation=0;
+            value=100;
+        }else if(strcmp(colorname.c_str(), COLOR_BLACK)==0){
+            hue=0;
+            saturation=0;
+            value=0;
+        }
+
+        if(muzzley_handle_lighting_write_HSV_request(lampManager, component, hue, saturation, value))
+            return true;
+        else
+            return false; 
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+}
+
 bool muzzley_handle_lighting_read_request(LampManager& lampManager, string component, string property, string cid, int t){
     int status;
     try{
@@ -2268,6 +2384,11 @@ bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT
             int value      = (int)_data["d"]["p"]["data"]["value"]["v"];
             int colortemp  = (int)_data["d"]["p"]["data"]["value"]["t"];
             muzzley_handle_lighting_write_HSVT_request(lampManager, component, hue, saturation, value, colortemp);
+        }
+        if(property==PROPERTY_COLOR_NAME){
+            string colorname = (string)_data["d"]["p"]["data"]["value"];
+            cout << "Requested color name: " << colorname << endl << flush;
+            muzzley_handle_lighting_write_colorname_request(lampManager, component, colorname);  
         }
     }
     return true;
@@ -3239,9 +3360,18 @@ void upnp_advertise(){
     cout << "URN: " << lighting_device_urn_char << endl << flush;
     cout << "HOST: " << lighting_host_char << endl << flush;
     cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_lighting_dev) << endl << flush;
-    cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_lighting_dev) << endl << flush;
+    //cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_lighting_dev) << endl << flush;
     cout << "PORT: " << gupnp_context_get_port (gupnp_lighting_context) << endl << flush;
-    cout << "INTERFACE: " << gupnp_lighting_network_interface << endl << endl << flush;
+    cout << "INTERFACE: " << gupnp_lighting_network_interface << endl << flush;
+    cout << "FRIENDLY NAME: " << muzzley_lighting_friendlyname << endl << flush;
+    cout << "UDN: " << muzzley_lighting_udn << endl << flush;
+    cout << "SERIAL NUMBER: " << muzzley_lighting_serialnumber << endl << flush;
+    cout << "MANUFACTURER: " << muzzley_manufacturer << endl << flush;
+    cout << "MANUFACTURER URL: " << muzzley_manufacturer_url << endl << flush;
+    cout << "MODEL NAME: " << muzzley_modelname << endl << flush;
+    cout << "MODEL NUMBER: " << muzzley_modelnumber << endl << flush;
+    cout << "MODEL DESCRIPTION: " << muzzley_modeldescription << endl << endl << flush;
+    
 
     //Plugs UPnP
     const char* gupnp_plugs_network_interface = muzzley_network_interface;
@@ -3273,9 +3403,18 @@ void upnp_advertise(){
     cout << "URN: " << plugs_device_urn_char << endl << flush;
     cout << "HOST: " << plugs_host_char << endl << flush;
     cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_plugs_dev) << endl << flush;
-    cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_plugs_dev) << endl << flush;
+    //cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_plugs_dev) << endl << flush;
     cout << "PORT: " << gupnp_context_get_port (gupnp_plugs_context) << endl << flush;
-    cout << "INTERFACE: " << gupnp_plugs_network_interface << endl << endl << flush;
+    cout << "INTERFACE: " << gupnp_plugs_network_interface << endl << flush;
+    cout << "FRIENDLY NAME: " << muzzley_plugs_friendlyname << endl << flush;
+    cout << "UDN: " << muzzley_plugs_udn << endl << flush;
+    cout << "SERIAL NUMBER: " << muzzley_plugs_serialnumber << endl << flush;
+    cout << "MANUFACTURER: " << muzzley_manufacturer << endl << flush;
+    cout << "MANUFACTURER URL: " << muzzley_manufacturer_url << endl << flush;
+    cout << "MODEL NAME: " << muzzley_modelname << endl << flush;
+    cout << "MODEL NUMBER: " << muzzley_modelnumber << endl << flush;
+    cout << "MODEL DESCRIPTION: " << muzzley_modeldescription << endl << endl << flush;
+    
 
     //gssdp_resource_group_add_resource_simple(gupnp_lighting_resource_group, lighting_device_urn_char, lighting_device_urn_char , lighting_host_char );
     //gssdp_resource_group_add_resource_simple(gupnp_plugs_resource_group, plugs_device_urn_char, plugs_device_urn_char , plugs_host_char );
@@ -3310,11 +3449,20 @@ void cmd_line_parser_help(){
     cout << "--manager-port                 set the Muzzley Manager Port number" << endl << flush;
     cout << "--lighting-profileid           set the Muzzley Lighting Profileid" << endl << flush;
     cout << "--lighting-app-token           set the Muzzley Lighting AppToken" << endl << flush;
+    cout << "--lighting-friendlyname        set the Muzzley Lighting Friendlyname" << endl << flush;
     cout << "--plugs-profileid              set the Muzzley Plugs Profileid" << endl << flush;
-    cout << "--plugs-app-token              set the Muzzley Plugs AppToken" << endl << flush;        
-    cout << "--network-lighting-port        set the Muzzley Lighting UPNP Port number" << endl << flush;
-    cout << "--network-plugs-port           set the Muzzley Plugs UPNP Port number" << endl << flush;
+    cout << "--plugs-app-token              set the Muzzley Plugs AppToken" << endl << flush; 
+    cout << "--plugs-friendlyname           set the Muzzley Plugs Friendlyname" << endl << flush;       
     cout << "--color-mode                   set the Muzzley Interface Color Mode" << endl << flush;
+    cout << "--network-interface            set the UPnP Network Interface" << endl << flush;
+    cout << "--lighting-port                set the UPNP Lighting Port number" << endl << flush;
+    cout << "--plugs-port                   set the UPNP Plugs Port number" << endl << flush;
+    cout << "--manufacturer                 set the UPnP Manufacturer string" << endl << flush;
+    cout << "--manufacturer-url             set the UPnP Manufacturer URL" << endl << flush;
+    cout << "--model-name                   set the UPnP Modelname string" << endl << flush;
+    cout << "--model-number                 set the UPnP Model Number" << endl << flush;
+    cout << "--model-description            set the UPnP Model Description string" << endl << flush;
+    cout << "--network-interface            set the UPnP Network Interface" << endl << flush;
     cout << "--help                         show this help text" << endl << endl << flush;
 }
 
@@ -3327,8 +3475,10 @@ void muzzley_print_status_info(){
     cout << "MANAGER PORT: " << muzzley_manager_port << endl << flush;
     cout << "LIGHTING PROFILEID: " << muzzley_lighting_profileid << endl << flush;
     cout << "LIGHTING APPTOKEN: " << muzzley_lighting_apptoken << endl << flush;
+    cout << "LIGHTING FRIENDLYNAME: " << muzzley_lighting_friendlyname << endl << flush;
     cout << "PLUGS PROFILEID: " << muzzley_plugs_profileid << endl << flush;
     cout << "PLUGS APPTOKEN: " << muzzley_plugs_apptoken << endl << flush;
+    cout << "PLUGS FRIENDLYNAME: " << muzzley_plugs_friendlyname << endl << flush;
     cout << "COLOR MODE: " << muzzley_color_mode << endl << endl << flush;
 }
 
@@ -3354,17 +3504,30 @@ int main(int argc, char* argv[]){
     muzzley_color_mode=PROPERTY_COLOR_HSV;
     muzzley_core_endpointhost=MUZZLEY_DEFAULT_CORE_ENDPOINTHOST;
     muzzley_api_endpointhost=MUZZLEY_DEFAULT_API_ENDPOINTHOST;
-    muzzley_manager_endpointhost=MUZZLEY_DEFAULT_MANAGER_ENDPOINTHOST;
     muzzley_api_port=MUZZLEY_DEFAULT_API_PORT;
+    muzzley_manager_endpointhost=MUZZLEY_DEFAULT_MANAGER_ENDPOINTHOST;
     muzzley_manager_port=MUZZLEY_DEFAULT_MANAGER_PORT;
+    muzzley_manager_register_url=MUZZLEY_DEFAULT_MANAGER_REGISTER_URL;
+    muzzley_manager_components_url=MUZZLEY_DEFAULT_MANAGER_COMPONENTS_URL;
+    muzzley_lighting_friendlyname=MUZZLEY_DEFAULT_LIGHTING_FRIENDLYNAME;
     muzzley_lighting_profileid=MUZZLEY_DEFAULT_LIGHTING_PROFILEID;
     muzzley_lighting_apptoken=MUZZLEY_DEFAULT_LIGHTING_APP_TOKEN;
+    muzzley_lighting_udn=MUZZLEY_DEFAULT_LIGHTING_UDN;
+    muzzley_lighting_serialnumber=MUZZLEY_DEFAULT_LIGHTING_SERIALNUMBER;
+    muzzley_plugs_friendlyname=MUZZLEY_DEFAULT_PLUGS_FRIENDLYNAME;
     muzzley_plugs_profileid=MUZZLEY_DEFAULT_PLUGS_PROFILEID;
     muzzley_plugs_apptoken=MUZZLEY_DEFAULT_PLUGS_APP_TOKEN;
+    muzzley_plugs_udn=MUZZLEY_DEFAULT_PLUGS_UDN;
+    muzzley_plugs_serialnumber=MUZZLEY_DEFAULT_PLUGS_SERIALNUMBER;
     muzzley_network_interface=MUZZLEY_DEFAULT_NETWORK_INTERFACE;
     muzzley_network_plugs_port=MUZZLEY_DEFAULT_NETWORK_PLUGS_PORT;
     muzzley_network_lighting_port=MUZZLEY_DEFAULT_NETWORK_LIGHTING_PORT;
-
+    muzzley_manufacturer=MUZZLEY_DEFAULT_MANUFACTURER;
+    muzzley_manufacturer_url=MUZZLEY_DEFAULT_MANUFACTURER_URL;
+    muzzley_modelname=MUZZLEY_DEFAULT_MODELNAME;
+    muzzley_modelnumber=MUZZLEY_DEFAULT_MODELNUMBER;
+    muzzley_modeldescription=MUZZLEY_DEFAULT_MODELDESCRIPTION;
+  
     //Get MACAdress info from the current network interface in use
     muzzley_lighting_macAddress = get_iface_macAdress(muzzley_network_interface);
        muzzley_plugs_macAddress = get_iface_macAdress(muzzley_network_interface);
@@ -3387,11 +3550,23 @@ int main(int argc, char* argv[]){
             } else if (strcmp(argv[i], "--lighting-profileid")==0) {
                 muzzley_lighting_profileid = argv[i + 1];
             } else if (strcmp(argv[i], "--lighting-app-token")==0) {
-                muzzley_lighting_apptoken = argv[i + 1];
+                muzzley_lighting_apptoken = argv[i + 1];  
+            } else if (strcmp(argv[i], "--lighting-friendlyname")==0) {
+                muzzley_lighting_friendlyname = argv[i + 1];
+            } else if (strcmp(argv[i], "--lighting-serialnumber")==0) {
+                muzzley_lighting_serialnumber = argv[i + 1];
+            } else if (strcmp(argv[i], "--lighting-udn")==0) {
+                muzzley_lighting_udn = argv[i + 1];  
             } else if (strcmp(argv[i], "--plugs-profileid")==0) {
                 muzzley_plugs_profileid = argv[i + 1];
             } else if (strcmp(argv[i], "--plugs-app-token")==0) {
                 muzzley_plugs_apptoken = argv[i + 1];
+            } else if (strcmp(argv[i], "--plugs-friendlyname")==0) {
+                muzzley_plugs_friendlyname = argv[i + 1];
+            } else if (strcmp(argv[i], "--plugs-serialnumber")==0) {
+                muzzley_plugs_serialnumber = argv[i + 1];
+            } else if (strcmp(argv[i], "--plugs-udn")==0) {
+                muzzley_plugs_udn = argv[i + 1];
             } else if (strcmp(argv[i], "--network-interface")==0) {
                 muzzley_network_interface = argv[i + 1];
             } else if (strcmp(argv[i], "--network-lighting-port")==0) {
@@ -3409,6 +3584,16 @@ int main(int argc, char* argv[]){
                 	cout << "Unknown color mode. Using HSV as default." << endl << flush;
                 	muzzley_color_mode=PROPERTY_COLOR_HSV;
                 }
+            } else if (strcmp(argv[i], "--manufacturer")==0) {
+                muzzley_manufacturer = argv[i + 1];
+            } else if (strcmp(argv[i], "--manufacturer-url")==0) {
+                muzzley_manufacturer_url = argv[i + 1];
+            } else if (strcmp(argv[i], "--model-name")==0) {
+                muzzley_modelname = argv[i + 1];
+            } else if (strcmp(argv[i], "--model-number")==0) {
+                muzzley_modelnumber = argv[i + 1];
+            } else if (strcmp(argv[i], "--model-description")==0) {
+                muzzley_modeldescription = argv[i + 1];
             } else if (strcmp(argv[i], "--help")==0) {
                 cmd_line_parser_help();
                 exit(0);
@@ -3492,7 +3677,8 @@ int main(int argc, char* argv[]){
     _muzzley_plugs_client.setLoopAssynchronous(MUZZLEY_LOOPASSYNCHRONOUS);
     
     _muzzley_lighting_client.on(muzzley::AppLoggedIn,[&lampManager] (muzzley::Message& _data, muzzley::Client& _muzzley_lighting_client) -> bool{
-        cout << "Lighting logged in with id " << _data["d"]["activityId"] << endl << flush;
+        muzzley_lighting_sessionid = (string)_data["d"]["sessionId"];
+        cout << "Lighting logged in with session id: " << muzzley_lighting_sessionid << endl << flush;
 
         muzzley::Subscription _s1;
         _s1.setNamespace(MUZZLEY_WORKSPACE);
@@ -3518,7 +3704,8 @@ int main(int argc, char* argv[]){
     });
 
     _muzzley_plugs_client.on(muzzley::AppLoggedIn,[] (muzzley::Message& _data, muzzley::Client& _muzzley_plugs_client) -> bool{
-        cout << "Plugs logged in with id " << _data["d"]["activityId"] << endl << flush;
+        muzzley_plugs_sessionid = (string)_data["d"]["sessionId"];
+        cout << "Plugs logged in with session id: " << muzzley_plugs_sessionid << endl << flush;
        
         muzzley::Subscription _s1;
         _s1.setNamespace(MUZZLEY_WORKSPACE);
@@ -3542,6 +3729,7 @@ int main(int argc, char* argv[]){
         return true;
     });
     
+    
     _muzzley_lighting_client.on(muzzley::Reconnect, [] (muzzley::Message& _data, muzzley::Client& _muzzley_lighting_client) -> bool {
         cout << "Reconnecting Muzzley Lighting Client..." << endl << flush;
         return true;
@@ -3551,6 +3739,7 @@ int main(int argc, char* argv[]){
         cout << "Reconnecting Muzzley Plugs Client..." << endl << flush;
         return true;
     });
+   
 
     try{
         // Waits for global manager lighting devicekey
