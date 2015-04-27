@@ -325,9 +325,9 @@ src-git alljoyn https://git.allseenalliance.org/gerrit/core/openwrt_feed;barrier
 | --manager-port | set the Muzzley Manager Port number |
 | --lighting-profileid | set the Muzzley Lighting Profileid |
 | --lighting-app-token | set the Muzzley Lighting AppToken |
+| --lighting-port | set the Muzzley Lighting UPNP Port number |
 | --plugs-profileid | set the Muzzley Plugs Profileid |
 | --plugs-app-token | set the Muzzley Plugs AppToken |
-| --network-lighting-port | set the Muzzley Lighting UPNP Port number |
-| --network-plugs-port | set the Muzzley Plugs UPNP Port number |
+| --plugs-port | set the Muzzley Plugs UPNP Port number |
 | --color-mode | set the Muzzley Interface Color Mode |
 | --help | show this help text |
