@@ -199,40 +199,49 @@ using namespace lsf;
 using namespace ajn;
 using namespace services;
 
-const char* muzzley_color_mode=NULL;
-const char* muzzley_core_endpointhost=NULL;
-const char* muzzley_api_endpointhost=NULL;
-const char* muzzley_manager_endpointhost=NULL;
-const char* muzzley_manager_register_url=NULL;
-const char* muzzley_manager_components_url=NULL;
-const char* muzzley_lighting_profileid=NULL;
-const char* muzzley_lighting_apptoken=NULL;
-const char* muzzley_lighting_friendlyname=NULL;
-const char* muzzley_lighting_udn=NULL;
-const char* muzzley_lighting_serialnumber=NULL;
-const char* muzzley_plugs_profileid=NULL;
-const char* muzzley_plugs_apptoken=NULL;
-const char* muzzley_plugs_friendlyname=NULL;
-const char* muzzley_plugs_udn=NULL;
-const char* muzzley_plugs_serialnumber=NULL;
-const char* muzzley_network_interface=NULL;
-const char* muzzley_manufacturer=NULL;
-const char* muzzley_manufacturer_url=NULL;
-const char* muzzley_modeldescription=NULL;
-const char* muzzley_modelname=NULL;
-const char* muzzley_modelnumber=NULL;
+const char* muzzley_color_mode="";
+const char* muzzley_core_endpointhost="";
+const char* muzzley_api_endpointhost="";
+const char* muzzley_manager_endpointhost="";
+const char* muzzley_manager_register_url="";
+const char* muzzley_manager_components_url="";
+const char* muzzley_lighting_profileid="";
+const char* muzzley_lighting_apptoken="";
+const char* muzzley_lighting_upnp_friendlyname="";
+const char* muzzley_lighting_upnp_udn="";
+const char* muzzley_lighting_upnp_serialnumber="";
+const char* muzzley_lighting_upnp_urn="";
+const char* muzzley_lighting_upnp_host="";
+const char* muzzley_lighting_upnp_xml_filepath="";
+const char* muzzley_lighting_upnp_interface="";
+string muzzley_lighting_sessionid="";
+string muzzley_lighting_macAddress="";
+string muzzley_lighting_deviceKey="";
+int muzzley_lighting_upnp_port=0;
 
+const char* muzzley_plugs_profileid="";
+const char* muzzley_plugs_apptoken="";
+const char* muzzley_plugs_upnp_friendlyname="";
+const char* muzzley_plugs_upnp_udn="";
+const char* muzzley_plugs_upnp_serialnumber="";
+const char* muzzley_plugs_upnp_urn="";
+const char* muzzley_plugs_upnp_host="";
+const char* muzzley_plugs_upnp_xml_filepath="";
+const char* muzzley_plugs_upnp_interface="";
+string muzzley_plugs_sessionid="";
+string muzzley_plugs_macAddress="";
+string muzzley_plugs_deviceKey="";
+int muzzley_plugs_upnp_port=0;
 
-string muzzley_lighting_sessionid;
-string muzzley_plugs_sessionid;
-string muzzley_lighting_macAddress;
-string muzzley_plugs_macAddress;
-string muzzley_lighting_deviceKey;
-string muzzley_plugs_deviceKey;
+const char* muzzley_network_interface="";
+const char* muzzley_manufacturer="";
+const char* muzzley_manufacturer_url="";
+const char* muzzley_modeldescription="";
+const char* muzzley_modelname="";
+const char* muzzley_modelnumber="";
 int muzzley_api_port=0;
 int muzzley_manager_port=0;
-int muzzley_network_lighting_port=0;
-int muzzley_network_plugs_port=0;
+bool muzzley_OnBehalfOf=true;
 
 LSFString muzzley_controllerServiceID;
 LSFString muzzley_controllerServiceName;
@@ -241,14 +250,14 @@ bool muzzley_plugs_registered=false;
 bool connectedToControllerService = false;
 LSFStringList lampList;
 
-AnnounceHandlerImpl* announceHandler = 0;
-ControlPanelService* controlPanelService = 0;
-ControlPanelController* controlPanelController = 0;
-ControlPanelListenerImpl* controlPanelListener = 0;
-NotificationService* conService = 0;
-NotificationService* notificationService = 0;
-NotificationSender* notificationSender = 0;
-ControllerNotificationReceiver* controller_receiver = 0;
+AnnounceHandlerImpl* announceHandler=0;
+ControlPanelService* controlPanelService=0;
+ControlPanelController* controlPanelController=0;
+ControlPanelListenerImpl* controlPanelListener=0;
+NotificationService* conService=0;
+NotificationService* notificationService=0;
+NotificationSender* notificationSender=0;
+ControllerNotificationReceiver* controller_receiver=0;
 
 BusAttachment* bus;
 
@@ -789,14 +798,14 @@ void gupnp_generate_lighting_XML(){
         responseStream << "</specVersion>\n";
         responseStream << "<device>\n";
         responseStream << "<deviceType>urn:Muzzley:device:" << muzzley_lighting_profileid << ":1</deviceType>\n";
-        responseStream << "<friendlyName>" << muzzley_lighting_friendlyname << "</friendlyName>\n";
+        responseStream << "<friendlyName>" << muzzley_lighting_upnp_friendlyname << "</friendlyName>\n";
         responseStream << "<manufacturer>" << muzzley_manufacturer << "</manufacturer>\n";
         responseStream << "<manufacturerURL>" << muzzley_manufacturer_url << "</manufacturerURL>\n";
         responseStream << "<modelDescription>" << muzzley_modeldescription << "</modelDescription>\n";
         responseStream << "<modelName>" << muzzley_modelname << "</modelName>\n";
         responseStream << "<modelNumber>" << muzzley_modelnumber << "</modelNumber>\n";
-        responseStream << "<UDN>uuid:" << muzzley_lighting_udn << "</UDN>\n";
-        responseStream << "<serialNumber>" << muzzley_lighting_serialnumber << "</serialNumber>\n";
+        responseStream << "<UDN>uuid:" << muzzley_lighting_upnp_udn << "</UDN>\n";
+        responseStream << "<serialNumber>" << muzzley_lighting_upnp_serialnumber << "</serialNumber>\n";
         responseStream << "<macAddress>" << muzzley_lighting_macAddress << "</macAddress>\n";
         responseStream << "<deviceKey>" << muzzley_lighting_deviceKey << "</deviceKey>\n";
         responseStream << "<components>\n";
@@ -910,8 +919,8 @@ bool muzzley_lighting_connect_manager(){
         _json_body_part <<
             "profileId" << muzzley_lighting_profileid <<
             "macAddress" << muzzley_lighting_macAddress <<
-            "serialNumber" << muzzley_lighting_serialnumber <<
-            "friendlyName" << muzzley_lighting_friendlyname;
+            "serialNumber" << muzzley_lighting_upnp_serialnumber <<
+            "friendlyName" << muzzley_lighting_upnp_friendlyname;
 
             if(muzzley_lighting_deviceKey!=""){
                 _json_body_part <<
@@ -1016,7 +1025,7 @@ bool muzzley_replace_lighting_components(){
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
+    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
 
@@ -1079,7 +1088,7 @@ bool muzzley_add_lighting_component(LSFString lampID, LSFString lampName){
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
+    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
     _req->body(_str_add_component);
@@ -1144,7 +1153,7 @@ bool muzzley_add_lighting_components(LSFStringList new_lampIDs){
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
+    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
 
@@ -1207,7 +1216,7 @@ bool muzzley_remove_lighting_components(LSFStringList del_lampIDs){
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
+    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
 
@@ -1239,14 +1248,14 @@ void gupnp_generate_plugs_XML(){
     responseStream << "</specVersion>\n";
     responseStream << "<device>\n";
     responseStream << "<deviceType>urn:Muzzley:device:" << muzzley_plugs_profileid << ":1</deviceType>\n";
-    responseStream << "<friendlyName>" << muzzley_plugs_friendlyname << "</friendlyName>\n";
+    responseStream << "<friendlyName>" << muzzley_plugs_upnp_friendlyname << "</friendlyName>\n";
     responseStream << "<manufacturer>" << muzzley_manufacturer << "</manufacturer>\n";
     responseStream << "<manufacturerURL>" << muzzley_manufacturer_url << "</manufacturerURL>\n";
     responseStream << "<modelDescription>" << muzzley_modeldescription << "</modelDescription>\n";
     responseStream << "<modelName>" << muzzley_modelname << "</modelName>\n";
     responseStream << "<modelNumber>" << muzzley_modelnumber << "</modelNumber>\n";
-    responseStream << "<UDN>uuid:" << muzzley_plugs_udn << "</UDN>\n";
-    responseStream << "<serialNumber>" << muzzley_plugs_serialnumber << "</serialNumber>\n";
+    responseStream << "<UDN>uuid:" << muzzley_plugs_upnp_udn << "</UDN>\n";
+    responseStream << "<serialNumber>" << muzzley_plugs_upnp_serialnumber << "</serialNumber>\n";
     responseStream << "<macAddress>" << muzzley_plugs_macAddress << "</macAddress>\n";
     responseStream << "<deviceKey>" << muzzley_plugs_deviceKey << "</deviceKey>\n";
     responseStream << "<components>\n";
@@ -1339,8 +1348,8 @@ bool muzzley_plugs_connect_manager(){
         _json_body_part <<
             "profileId" << muzzley_plugs_profileid <<
             "macAddress" << muzzley_plugs_macAddress <<
-            "serialNumber" << muzzley_plugs_serialnumber <<
-            "friendlyName" << muzzley_plugs_friendlyname;
+            "serialNumber" << muzzley_plugs_upnp_serialnumber <<
+            "friendlyName" << muzzley_plugs_upnp_friendlyname;
 
             if(muzzley_plugs_deviceKey!=""){
                 _json_body_part <<
@@ -1434,7 +1443,7 @@ bool muzzley_replace_plugs_components(){
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_plugs_serialnumber);
+    _req->header("SERIALNUMBER", muzzley_plugs_upnp_serialnumber);
     _req->header("DEVICEKEY", muzzley_plugs_deviceKey);
 
     _req->body(_str_replace_components);
@@ -1494,7 +1503,7 @@ bool muzzley_add_plugs_component(string plug_id, string plug_name){
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
+    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
     _req->body(_str_add_component);
@@ -1554,7 +1563,7 @@ bool muzzley_add_plugs_components(string plug_id, string plug_name){
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
+    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
 
@@ -1617,7 +1626,7 @@ bool muzzley_remove_plugs_component(string plug_id, string plug_name){
     _req->header("Accept", "*/*");
     _req->header("Content-Type", "application/json");
     _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_serialnumber);
+    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
     _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
 
@@ -2348,8 +2357,17 @@ bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT
     string property = (string)_data["d"]["p"]["property"];
     string user_name = (string)_data["d"]["u"]["name"];
     string user_id = (string)_data["d"]["u"]["profileId"];
+    bool isOnBehalfOf = (bool)_data["d"]["u"]["isOnBehalfOf"];
     string cid = (string)_data["h"]["cid"];
+    string ch = (string)_data["h"]["ch"];
     int t = (int)_data["h"]["t"];
+
+    if(!muzzley_OnBehalfOf){
+        if(isOnBehalfOf){
+            cout << "Ignoring request on behalf of user id: " << user_id << " Name: " << user_name << endl << flush;
+            return false;
+        }
+    }
 
     muzzley_query_unknown_lampnames(&lampManager);
     print_request_vector();
@@ -2747,10 +2765,17 @@ bool muzzley_handle_plug_request(muzzley::JSONObjT _data){
     string property = (string)_data["d"]["p"]["property"];
     string user_name = (string)_data["d"]["u"]["name"];
     string user_id = (string)_data["d"]["u"]["profileId"];
+    bool isOnBehalfOf = (bool)_data["d"]["u"]["isOnBehalfOf"];
     string cid = (string)_data["h"]["cid"];
     int t = (int)_data["h"]["t"];
     
-    cout << "Handling plug request for ID: " << component << endl << flush;
+    if(!muzzley_OnBehalfOf){
+        if(isOnBehalfOf){
+            cout << "Ignoring request on behalf of user id: " << user_id << " Name: " << user_name << endl << flush;
+            return false;
+        }
+    }
+
     print_request_vector();
     muzzley_plug_vector_print();
     
@@ -3313,6 +3338,26 @@ void cleanup() {
 }
 
 
+void upnp_info(const char* urn, const char* host, const char* xml_file_path, int port,
+            const char* interface, const char* friendlyname, const char* udn, const char* serialnumber,
+            const char* manufacturer, const char* manufacturer_url, const char* modelname,
+            const char* modelnumber, const char* modeldescription){
+
+    cout << "URN: " << urn << endl << flush;
+    cout << "HOST: " << host << endl << flush;
+    cout << "XML FILE PATH: " << xml_file_path << endl << flush;
+    cout << "PORT: " << port << endl << flush;
+    cout << "INTERFACE: " << interface << endl << flush;
+    cout << "FRIENDLY NAME: " << friendlyname << endl << flush;
+    cout << "UDN: " << udn << endl << flush;
+    cout << "SERIAL NUMBER: " << serialnumber << endl << flush;
+    cout << "MANUFACTURER: " << manufacturer << endl << flush;
+    cout << "MANUFACTURER URL: " << manufacturer_url << endl << flush;
+    cout << "MODEL NAME: " << modelname << endl << flush;
+    cout << "MODEL NUMBER: " << modelnumber << endl << flush;
+    cout << "MODEL DESCRIPTION: " << modeldescription << endl << endl << flush;
+}
+
 void upnp_advertise(){
 
     GMainLoop *main_loop; 
@@ -3331,8 +3376,7 @@ void upnp_advertise(){
     #endif
   
     //Lighting UPnP
-    const char* gupnp_lighting_network_interface = muzzley_network_interface;
-    gupnp_lighting_context = gupnp_context_new (NULL, gupnp_lighting_network_interface, muzzley_network_lighting_port, &error);
+    gupnp_lighting_context = gupnp_context_new (NULL, muzzley_lighting_upnp_interface, muzzley_lighting_upnp_port, &error);
     if (error) {
         g_printerr ("Error creating the GUPnP lighting context: %s\n", error->message);
         g_error_free (error);
@@ -3350,32 +3394,23 @@ void upnp_advertise(){
     std::stringstream lighting_device_urn;
     lighting_device_urn << "urn:Muzzley:device:" << muzzley_lighting_profileid << ":1";
     const std::string tmp_lighting_urn = lighting_device_urn.str();
-    const char* lighting_device_urn_char = tmp_lighting_urn.c_str();    
+    muzzley_lighting_upnp_urn = tmp_lighting_urn.c_str();    
    
     std::stringstream lighting_host;
     lighting_host << "http://" << gupnp_context_get_host_ip (gupnp_lighting_context) << ":" << gupnp_context_get_port (gupnp_lighting_context) << "/" << gupnp_root_device_get_relative_location(gupnp_lighting_dev);
-    const char* lighting_host_char = lighting_host.str().c_str(); 
+    muzzley_lighting_upnp_host = lighting_host.str().c_str(); 
+
+    muzzley_lighting_upnp_port=gupnp_context_get_port (gupnp_lighting_context);
+    muzzley_lighting_upnp_xml_filepath=gupnp_root_device_get_description_path(gupnp_lighting_dev);
 
     cout << endl << "GUPNP LIGHTING INFO:" << endl << flush;
-    cout << "URN: " << lighting_device_urn_char << endl << flush;
-    cout << "HOST: " << lighting_host_char << endl << flush;
-    cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_lighting_dev) << endl << flush;
-    //cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_lighting_dev) << endl << flush;
-    cout << "PORT: " << gupnp_context_get_port (gupnp_lighting_context) << endl << flush;
-    cout << "INTERFACE: " << gupnp_lighting_network_interface << endl << flush;
-    cout << "FRIENDLY NAME: " << muzzley_lighting_friendlyname << endl << flush;
-    cout << "UDN: " << muzzley_lighting_udn << endl << flush;
-    cout << "SERIAL NUMBER: " << muzzley_lighting_serialnumber << endl << flush;
-    cout << "MANUFACTURER: " << muzzley_manufacturer << endl << flush;
-    cout << "MANUFACTURER URL: " << muzzley_manufacturer_url << endl << flush;
-    cout << "MODEL NAME: " << muzzley_modelname << endl << flush;
-    cout << "MODEL NUMBER: " << muzzley_modelnumber << endl << flush;
-    cout << "MODEL DESCRIPTION: " << muzzley_modeldescription << endl << endl << flush;
-    
+    upnp_info(muzzley_lighting_upnp_urn, muzzley_lighting_upnp_host, muzzley_lighting_upnp_xml_filepath, muzzley_lighting_upnp_port,
+            muzzley_lighting_upnp_interface, muzzley_lighting_upnp_friendlyname, muzzley_lighting_upnp_udn, muzzley_lighting_upnp_serialnumber,
+            muzzley_manufacturer, muzzley_manufacturer_url, muzzley_modelname, muzzley_modelnumber, muzzley_modeldescription);
+
 
     //Plugs UPnP
-    const char* gupnp_plugs_network_interface = muzzley_network_interface;
-    gupnp_plugs_context = gupnp_context_new (NULL, gupnp_plugs_network_interface, muzzley_network_plugs_port, &error);
+    gupnp_plugs_context = gupnp_context_new (NULL, muzzley_plugs_upnp_interface, muzzley_plugs_upnp_port, &error);
     if (error) {
         g_printerr ("Error creating the GUPnP plugs context: %s\n", error->message);
         g_error_free (error);
@@ -3393,28 +3428,20 @@ void upnp_advertise(){
     std::stringstream plugs_device_urn;
     plugs_device_urn << "urn:Muzzley:device:" << muzzley_plugs_profileid << ":1";
     const std::string tmp_plugs_urn = plugs_device_urn.str();
-    const char* plugs_device_urn_char = tmp_plugs_urn.c_str();    
+    muzzley_plugs_upnp_urn = tmp_plugs_urn.c_str();    
    
     std::stringstream plugs_host;
     plugs_host << "http://" << gupnp_context_get_host_ip (gupnp_plugs_context) << ":" << gupnp_context_get_port (gupnp_plugs_context) << "/" << gupnp_root_device_get_relative_location(gupnp_plugs_dev);
-    const char* plugs_host_char = plugs_host.str().c_str(); 
+    muzzley_plugs_upnp_host = plugs_host.str().c_str(); 
+
+    muzzley_plugs_upnp_port=gupnp_context_get_port (gupnp_plugs_context);
+    muzzley_plugs_upnp_xml_filepath=gupnp_root_device_get_description_path(gupnp_plugs_dev);
+
 
     cout << endl << "GUPNP PLUGS INFO:" << endl << flush;
-    cout << "URN: " << plugs_device_urn_char << endl << flush;
-    cout << "HOST: " << plugs_host_char << endl << flush;
-    cout << "XML FILE PATH: " << gupnp_root_device_get_description_path(gupnp_plugs_dev) << endl << flush;
-    //cout << "RELATIVE LOCATION: " << gupnp_root_device_get_relative_location(gupnp_plugs_dev) << endl << flush;
-    cout << "PORT: " << gupnp_context_get_port (gupnp_plugs_context) << endl << flush;
-    cout << "INTERFACE: " << gupnp_plugs_network_interface << endl << flush;
-    cout << "FRIENDLY NAME: " << muzzley_plugs_friendlyname << endl << flush;
-    cout << "UDN: " << muzzley_plugs_udn << endl << flush;
-    cout << "SERIAL NUMBER: " << muzzley_plugs_serialnumber << endl << flush;
-    cout << "MANUFACTURER: " << muzzley_manufacturer << endl << flush;
-    cout << "MANUFACTURER URL: " << muzzley_manufacturer_url << endl << flush;
-    cout << "MODEL NAME: " << muzzley_modelname << endl << flush;
-    cout << "MODEL NUMBER: " << muzzley_modelnumber << endl << flush;
-    cout << "MODEL DESCRIPTION: " << muzzley_modeldescription << endl << endl << flush;
-    
+    upnp_info(muzzley_plugs_upnp_urn, muzzley_plugs_upnp_host, muzzley_plugs_upnp_xml_filepath, muzzley_plugs_upnp_port,
+            muzzley_plugs_upnp_interface, muzzley_plugs_upnp_friendlyname, muzzley_plugs_upnp_udn, muzzley_plugs_upnp_serialnumber,
+            muzzley_manufacturer, muzzley_manufacturer_url, muzzley_modelname, muzzley_modelnumber, muzzley_modeldescription);
 
     //gssdp_resource_group_add_resource_simple(gupnp_lighting_resource_group, lighting_device_urn_char, lighting_device_urn_char , lighting_host_char );
     //gssdp_resource_group_add_resource_simple(gupnp_plugs_resource_group, plugs_device_urn_char, plugs_device_urn_char , plugs_host_char );
@@ -3449,20 +3476,21 @@ void cmd_line_parser_help(){
     cout << "--manager-port                 set the Muzzley Manager Port number" << endl << flush;
     cout << "--lighting-profileid           set the Muzzley Lighting Profileid" << endl << flush;
     cout << "--lighting-app-token           set the Muzzley Lighting AppToken" << endl << flush;
-    cout << "--lighting-friendlyname        set the Muzzley Lighting Friendlyname" << endl << flush;
+    cout << "--lighting-friendlyname        set the Muzzley Lighting UPNP Friendlyname" << endl << flush;
+    cout << "--lighting-interface           set the Muzzley Lighting UPNP Interface" << endl << flush;
+    cout << "--lighting-port                set the Muzzley Lighting UPNP Port" << endl << flush;
     cout << "--plugs-profileid              set the Muzzley Plugs Profileid" << endl << flush;
     cout << "--plugs-app-token              set the Muzzley Plugs AppToken" << endl << flush; 
-    cout << "--plugs-friendlyname           set the Muzzley Plugs Friendlyname" << endl << flush;       
+    cout << "--plugs-friendlyname           set the Muzzley Plugs UPNP Friendlyname" << endl << flush;       
+    cout << "--plugs-interface              set the Muzzley Plugs UPNP Interface" << endl << flush;
+    cout << "--plugs-port                   set the Muzzley Plugs UPNP Port" << endl << flush;
     cout << "--color-mode                   set the Muzzley Interface Color Mode" << endl << flush;
-    cout << "--network-interface            set the UPnP Network Interface" << endl << flush;
-    cout << "--lighting-port                set the UPNP Lighting Port number" << endl << flush;
-    cout << "--plugs-port                   set the UPNP Plugs Port number" << endl << flush;
     cout << "--manufacturer                 set the UPnP Manufacturer string" << endl << flush;
     cout << "--manufacturer-url             set the UPnP Manufacturer URL" << endl << flush;
     cout << "--model-name                   set the UPnP Modelname string" << endl << flush;
     cout << "--model-number                 set the UPnP Model Number" << endl << flush;
     cout << "--model-description            set the UPnP Model Description string" << endl << flush;
-    cout << "--network-interface            set the UPnP Network Interface" << endl << flush;
+    cout << "--ignore-onbehalfof            ignore requests on behalf of" << endl << flush;
     cout << "--help                         show this help text" << endl << endl << flush;
 }
 
@@ -3475,11 +3503,12 @@ void muzzley_print_status_info(){
     cout << "MANAGER PORT: " << muzzley_manager_port << endl << flush;
     cout << "LIGHTING PROFILEID: " << muzzley_lighting_profileid << endl << flush;
     cout << "LIGHTING APPTOKEN: " << muzzley_lighting_apptoken << endl << flush;
-    cout << "LIGHTING FRIENDLYNAME: " << muzzley_lighting_friendlyname << endl << flush;
+    cout << "LIGHTING FRIENDLYNAME: " << muzzley_lighting_upnp_friendlyname << endl << flush;
     cout << "PLUGS PROFILEID: " << muzzley_plugs_profileid << endl << flush;
     cout << "PLUGS APPTOKEN: " << muzzley_plugs_apptoken << endl << flush;
-    cout << "PLUGS FRIENDLYNAME: " << muzzley_plugs_friendlyname << endl << flush;
-    cout << "COLOR MODE: " << muzzley_color_mode << endl << endl << flush;
+    cout << "PLUGS FRIENDLYNAME: " << muzzley_plugs_upnp_friendlyname << endl << flush;
+    cout << "COLOR MODE: " << muzzley_color_mode << endl << flush;
+    cout << "WORKERS: " << boolalpha << muzzley_OnBehalfOf << endl << endl << flush;
 }
 
 int main(int argc, char* argv[]){
@@ -3509,25 +3538,32 @@ int main(int argc, char* argv[]){
     muzzley_manager_port=MUZZLEY_DEFAULT_MANAGER_PORT;
     muzzley_manager_register_url=MUZZLEY_DEFAULT_MANAGER_REGISTER_URL;
     muzzley_manager_components_url=MUZZLEY_DEFAULT_MANAGER_COMPONENTS_URL;
-    muzzley_lighting_friendlyname=MUZZLEY_DEFAULT_LIGHTING_FRIENDLYNAME;
+    
     muzzley_lighting_profileid=MUZZLEY_DEFAULT_LIGHTING_PROFILEID;
     muzzley_lighting_apptoken=MUZZLEY_DEFAULT_LIGHTING_APP_TOKEN;
-    muzzley_lighting_udn=MUZZLEY_DEFAULT_LIGHTING_UDN;
-    muzzley_lighting_serialnumber=MUZZLEY_DEFAULT_LIGHTING_SERIALNUMBER;
-    muzzley_plugs_friendlyname=MUZZLEY_DEFAULT_PLUGS_FRIENDLYNAME;
+    muzzley_lighting_upnp_friendlyname=MUZZLEY_DEFAULT_LIGHTING_FRIENDLYNAME;
+    muzzley_lighting_upnp_udn=MUZZLEY_DEFAULT_LIGHTING_UDN;
+    muzzley_lighting_upnp_serialnumber=MUZZLEY_DEFAULT_LIGHTING_SERIALNUMBER;
+    muzzley_lighting_upnp_interface = MUZZLEY_DEFAULT_NETWORK_INTERFACE;
+    muzzley_lighting_upnp_port = MUZZLEY_DEFAULT_NETWORK_LIGHTING_PORT;
+
     muzzley_plugs_profileid=MUZZLEY_DEFAULT_PLUGS_PROFILEID;
     muzzley_plugs_apptoken=MUZZLEY_DEFAULT_PLUGS_APP_TOKEN;
-    muzzley_plugs_udn=MUZZLEY_DEFAULT_PLUGS_UDN;
-    muzzley_plugs_serialnumber=MUZZLEY_DEFAULT_PLUGS_SERIALNUMBER;
-    muzzley_network_interface=MUZZLEY_DEFAULT_NETWORK_INTERFACE;
-    muzzley_network_plugs_port=MUZZLEY_DEFAULT_NETWORK_PLUGS_PORT;
-    muzzley_network_lighting_port=MUZZLEY_DEFAULT_NETWORK_LIGHTING_PORT;
+    muzzley_plugs_upnp_friendlyname=MUZZLEY_DEFAULT_PLUGS_FRIENDLYNAME;
+    muzzley_plugs_upnp_udn=MUZZLEY_DEFAULT_PLUGS_UDN;
+    muzzley_plugs_upnp_serialnumber=MUZZLEY_DEFAULT_PLUGS_SERIALNUMBER;
+    muzzley_plugs_upnp_interface = MUZZLEY_DEFAULT_NETWORK_INTERFACE;
+    muzzley_plugs_upnp_port = MUZZLEY_DEFAULT_NETWORK_PLUGS_PORT;
+
     muzzley_manufacturer=MUZZLEY_DEFAULT_MANUFACTURER;
     muzzley_manufacturer_url=MUZZLEY_DEFAULT_MANUFACTURER_URL;
     muzzley_modelname=MUZZLEY_DEFAULT_MODELNAME;
     muzzley_modelnumber=MUZZLEY_DEFAULT_MODELNUMBER;
     muzzley_modeldescription=MUZZLEY_DEFAULT_MODELDESCRIPTION;
-  
+
+    muzzley_OnBehalfOf = true;
+
+
     //Get MACAdress info from the current network interface in use
     muzzley_lighting_macAddress = get_iface_macAdress(muzzley_network_interface);
        muzzley_plugs_macAddress = get_iface_macAdress(muzzley_network_interface);
@@ -3552,27 +3588,29 @@ int main(int argc, char* argv[]){
             } else if (strcmp(argv[i], "--lighting-app-token")==0) {
                 muzzley_lighting_apptoken = argv[i + 1];  
             } else if (strcmp(argv[i], "--lighting-friendlyname")==0) {
-                muzzley_lighting_friendlyname = argv[i + 1];
+                muzzley_lighting_upnp_friendlyname = argv[i + 1];
             } else if (strcmp(argv[i], "--lighting-serialnumber")==0) {
-                muzzley_lighting_serialnumber = argv[i + 1];
+                muzzley_lighting_upnp_serialnumber = argv[i + 1];
             } else if (strcmp(argv[i], "--lighting-udn")==0) {
-                muzzley_lighting_udn = argv[i + 1];  
+                muzzley_lighting_upnp_udn = argv[i + 1];  
+            } else if (strcmp(argv[i], "--lighting-interface")==0) {
+                muzzley_lighting_upnp_interface = argv[i + 1];
+            } else if (strcmp(argv[i], "--lighting-port")==0) {
+                muzzley_lighting_upnp_port = atoi(argv[i + 1]);
             } else if (strcmp(argv[i], "--plugs-profileid")==0) {
                 muzzley_plugs_profileid = argv[i + 1];
             } else if (strcmp(argv[i], "--plugs-app-token")==0) {
                 muzzley_plugs_apptoken = argv[i + 1];
             } else if (strcmp(argv[i], "--plugs-friendlyname")==0) {
-                muzzley_plugs_friendlyname = argv[i + 1];
+                muzzley_plugs_upnp_friendlyname = argv[i + 1];
             } else if (strcmp(argv[i], "--plugs-serialnumber")==0) {
-                muzzley_plugs_serialnumber = argv[i + 1];
+                muzzley_plugs_upnp_serialnumber = argv[i + 1];
             } else if (strcmp(argv[i], "--plugs-udn")==0) {
-                muzzley_plugs_udn = argv[i + 1];
-            } else if (strcmp(argv[i], "--network-interface")==0) {
-                muzzley_network_interface = argv[i + 1];
-            } else if (strcmp(argv[i], "--network-lighting-port")==0) {
-                muzzley_network_lighting_port = atoi(argv[i + 1]);
-            } else if (strcmp(argv[i], "--network-plugs-port")==0) {
-                muzzley_network_plugs_port = atoi(argv[i + 1]);
+                muzzley_plugs_upnp_udn = argv[i + 1];
+            } else if (strcmp(argv[i], "--plugs-interface")==0) {
+                muzzley_lighting_upnp_interface = argv[i + 1];
+            } else if (strcmp(argv[i], "--plugs-port")==0) {
+                muzzley_plugs_upnp_port = atoi(argv[i + 1]);
             } else if (strcmp(argv[i], "--color-mode")==0) {
                 if(strcmp(argv[i + 1], PROPERTY_COLOR_RGB)==0){
                 	muzzley_color_mode=PROPERTY_COLOR_RGB;
@@ -3594,6 +3632,8 @@ int main(int argc, char* argv[]){
                 muzzley_modelnumber = argv[i + 1];
             } else if (strcmp(argv[i], "--model-description")==0) {
                 muzzley_modeldescription = argv[i + 1];
+            } else if (strcmp(argv[i], "--ignore-onbehalfof")==0) {
+                muzzley_OnBehalfOf = false;
             } else if (strcmp(argv[i], "--help")==0) {
                 cmd_line_parser_help();
                 exit(0);
