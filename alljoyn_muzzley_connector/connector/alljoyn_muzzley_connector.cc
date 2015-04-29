@@ -138,11 +138,9 @@
 #define COLOR_MIN 0
 #define COLOR_MAX_UINT32 4294967296
 #define COLOR_MAX_PERCENT 100
-#define COLOR_MAX_360DEG 360
-#define COLOR_TEMPERATURE_MIN_UINT32 384286547
-#define COLOR_TEMPERATURE_MAX_UINT32 904203641
-#define COLOR_TEMPERATURE_MIN_DEC 2700
-#define COLOR_TEMPERATURE_MAX_DEC 5000
+#define COLOR_MAX_360DEG 360        
+#define COLOR_TEMPERATURE_MIN_DEC 1000
+#define COLOR_TEMPERATURE_MAX_DEC 20000
 #define COLOR_TEMPERATURE_DEFAULT_DEC 3600
 #define COLOR_RGB_MAX 255
 #define COLOR_DOUBLE_MAX 1
@@ -625,6 +623,20 @@ time_t get_plug_vector_time(int i){
     }
 }
 
+bool muzzley_plug_vector_check(string component){
+    try{
+        for (unsigned int i = 0; i < plug_vec.size(); i++){
+            if(strcmp(get<0>(plug_vec[i]).c_str(), component.c_str())){
+                return true;
+            }
+        }
+        return false;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+    }
+}
+
+
 void muzzley_plug_vector_print(){
     try{
         cout << endl << "PlugList:" << endl << flush;
@@ -769,6 +781,17 @@ bool muzzley_lamplist_del_lamp(string lampID){
         for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
             if(strcmp(local_it->first.c_str(), lampID.c_str())==0){
                 muzzley_lamplist.erase(lampID);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool muzzley_lamplist_check_lamp(string lampID){
+   for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+        for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
+            if(strcmp(local_it->first.c_str(), lampID.c_str())==0){
                 return true;
             }
         }
@@ -2017,10 +2040,10 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         long long long_saturation = atoll (saturation.data());
         long long long_colortemp = atoll (colortemp.data());
 
-        long long brightness_int = color_remap_long_long(long_brightness, COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_PERCENT);
-        long long hue_int        = color_remap_long_long(long_hue,        COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_360DEG);
-        long long saturation_int = color_remap_long_long(long_saturation, COLOR_MIN,    (COLOR_MAX_UINT32-1),    COLOR_MIN,    COLOR_MAX_PERCENT);
-        long long colortemp_int  = color_remap_long_long(long_colortemp,  COLOR_TEMPERATURE_MIN_UINT32, COLOR_TEMPERATURE_MAX_UINT32, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
+        long long brightness_int = color_remap_long_long(long_brightness, COLOR_MIN, (COLOR_MAX_UINT32-1), COLOR_MIN,                 COLOR_MAX_PERCENT);
+        long long hue_int        = color_remap_long_long(long_hue,        COLOR_MIN, (COLOR_MAX_UINT32-1), COLOR_MIN,                 COLOR_MAX_360DEG);
+        long long saturation_int = color_remap_long_long(long_saturation, COLOR_MIN, (COLOR_MAX_UINT32-1), COLOR_MIN,                 COLOR_MAX_PERCENT);
+        long long colortemp_int  = color_remap_long_long(long_colortemp,  COLOR_MIN, (COLOR_MAX_UINT32-1), COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
 
         if(strcmp(muzzley_color_mode, PROPERTY_COLOR_HSV)==0){
         	if(muzzley_publish_lampColor_hsv(lampID, hue_int, saturation_int, brightness_int, _muzzley_lighting_client)==false){
@@ -2151,11 +2174,15 @@ bool muzzley_handle_lighting_write_RGB_request(LampManager& lampManager, string 
         double blue_double  = color_remap_double(blue,  COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
 
         double hue_double, saturation_double, value_double;
+        double colortemp_double  = color_remap_double(COLOR_TEMPERATURE_DEFAULT_DEC,  COLOR_TEMPERATURE_MIN_DEC,    COLOR_TEMPERATURE_MAX_DEC, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
+        
         RGBtoHSV(red_double, green_double, blue_double, &hue_double, &saturation_double, &value_double);
 
-        long long long_hue = color_remap_long_long(round(hue_double), COLOR_MIN, COLOR_MAX_360DEG, COLOR_MIN, (COLOR_MAX_UINT32-1));
-        long long long_saturation = color_remap_long_long(round((saturation_double*100)), COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
-        long long long_brightness = color_remap_long_long(round((value_double*100)), COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_hue        = color_remap_long_long(round(hue_double),              COLOR_MIN,                 COLOR_MAX_360DEG,          COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_saturation = color_remap_long_long(round((saturation_double*100)), COLOR_MIN,                 COLOR_MAX_PERCENT,         COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_brightness = color_remap_long_long(round((value_double*100)),      COLOR_MIN,                 COLOR_MAX_PERCENT,         COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_colortemp  = color_remap_long_long(colortemp_double,               COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC, COLOR_MIN, (COLOR_MAX_UINT32-1));
+
 
         printf("Received Red int: %d\n", red);
         printf("Received Green int: %d\n", green);
@@ -2163,12 +2190,14 @@ bool muzzley_handle_lighting_write_RGB_request(LampManager& lampManager, string 
         printf("Calculated hue double: %f\n", hue_double);
         printf("Calculated saturation double: %f\n", saturation_double);
         printf("Calculated value double: %f\n", value_double);
+        printf("Calculated colortemp double: %f\n", colortemp_double);
         printf("Brightness: %lld\n", long_brightness);
         printf("Hue: %lld\n", long_hue);
         printf("Saturation: %lld\n", long_saturation);
+        printf("ColorTemp: %lld\n", long_colortemp);
         
         //onoff/Hue/Saturation/Colortemp/Brightness
-        LampState state(true, long_hue, long_saturation, COLOR_TEMPERATURE_DEFAULT_DEC, long_brightness);
+        LampState state(true, long_hue, long_saturation, long_colortemp, long_brightness);
         status = lampManager.TransitionLampState(component, state);
         if(status != LSF_OK)
             cout << "LampManager Error!" << endl << flush;
@@ -2185,23 +2214,28 @@ bool muzzley_handle_lighting_write_HSV_request(LampManager& lampManager, string 
     int status;
     try{
         
-        double hue_double        = color_remap_double(hue,        COLOR_MIN, COLOR_MAX_360DEG,          COLOR_MIN, COLOR_DOUBLE_MAX);
-        double saturation_double = color_remap_double(saturation, COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, COLOR_DOUBLE_MAX);
-        double value_double      = color_remap_double(value,      COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, COLOR_DOUBLE_MAX);
+        double hue_double        = color_remap_double(hue,                            COLOR_MIN,                  COLOR_MAX_360DEG,          COLOR_MIN,                 COLOR_DOUBLE_MAX);
+        double saturation_double = color_remap_double(saturation,                     COLOR_MIN,                  COLOR_MAX_PERCENT,         COLOR_MIN,                 COLOR_DOUBLE_MAX);
+        double value_double      = color_remap_double(value,                          COLOR_MIN,                  COLOR_MAX_PERCENT,         COLOR_MIN,                 COLOR_DOUBLE_MAX);
+        double colortemp_double  = color_remap_double(COLOR_TEMPERATURE_DEFAULT_DEC,  COLOR_TEMPERATURE_MIN_DEC,  COLOR_TEMPERATURE_MAX_DEC, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
         
+
         long long long_hue        = color_remap_long_long(round((hue_double*100)),        COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
         long long long_saturation = color_remap_long_long(round((saturation_double*100)), COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
         long long long_brightness = color_remap_long_long(round((value_double*100)),      COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
-       
+        long long long_colortemp  = color_remap_long_long(colortemp_double,               COLOR_TEMPERATURE_MIN_DEC,    COLOR_TEMPERATURE_MAX_DEC, COLOR_MIN, (COLOR_MAX_UINT32-1));
+
         printf("Calculated hue double: %f\n", hue_double);
         printf("Calculated saturation double: %f\n", saturation_double);
         printf("Calculated value double: %f\n", value_double);
+        printf("Calculated colortemp double: %f\n", colortemp_double);
         printf("Brightness: %lld\n", long_brightness);
         printf("Hue: %lld\n", long_hue);
         printf("Saturation: %lld\n", long_saturation);
+        printf("ColorTemp: %lld\n", long_colortemp);
    
         //onoff/Hue/Saturation/Colortemp/Brightness
-        LampState state(true, long_hue, long_saturation, COLOR_TEMPERATURE_DEFAULT_DEC, long_brightness);
+        LampState state(true, long_hue, long_saturation, long_colortemp, long_brightness);
         status = lampManager.TransitionLampState(component, state);
         if(status != LSF_OK)
             cout << "LampManager Error!" << endl << flush;
@@ -2218,15 +2252,15 @@ bool muzzley_handle_lighting_write_HSVT_request(LampManager& lampManager, string
     int status;
     try{
         
-        double hue_double        = color_remap_double(hue,        COLOR_MIN, COLOR_MAX_360DEG,          COLOR_MIN, COLOR_DOUBLE_MAX);
-        double saturation_double = color_remap_double(saturation, COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, COLOR_DOUBLE_MAX);
-        double value_double      = color_remap_double(value,      COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, COLOR_DOUBLE_MAX);
-        double colortemp_double  = color_remap_double(colortemp,  COLOR_MIN, COLOR_TEMPERATURE_MAX_DEC, COLOR_MIN, COLOR_DOUBLE_MAX);
+        double hue_double        = color_remap_double(hue,        COLOR_MIN,                    COLOR_MAX_360DEG,          COLOR_MIN,                 COLOR_DOUBLE_MAX);
+        double saturation_double = color_remap_double(saturation, COLOR_MIN,                    COLOR_MAX_PERCENT,         COLOR_MIN,                 COLOR_DOUBLE_MAX);
+        double value_double      = color_remap_double(value,      COLOR_MIN,                    COLOR_MAX_PERCENT,         COLOR_MIN,                 COLOR_DOUBLE_MAX);
+        double colortemp_double  = color_remap_double(colortemp,  COLOR_TEMPERATURE_MIN_DEC,    COLOR_TEMPERATURE_MAX_DEC, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
 
-        long long long_hue        = color_remap_long_long(round(hue_double),              COLOR_MIN, COLOR_MAX_360DEG,          COLOR_MIN, (COLOR_MAX_UINT32-1));
-        long long long_saturation = color_remap_long_long(round((saturation_double*100)), COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, (COLOR_MAX_UINT32-1));
-        long long long_brightness = color_remap_long_long(round((value_double*100)),      COLOR_MIN, COLOR_MAX_PERCENT,         COLOR_MIN, (COLOR_MAX_UINT32-1));
-        long long long_colortemp  = color_remap_long_long(round((colortemp_double*100)),  COLOR_MIN, COLOR_TEMPERATURE_MAX_DEC, COLOR_MIN, (COLOR_TEMPERATURE_MAX_UINT32-1));
+        long long long_hue        = color_remap_long_long(round(hue_double),              COLOR_MIN,                 COLOR_MAX_360DEG,                 COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_saturation = color_remap_long_long(round((saturation_double*100)), COLOR_MIN,                 COLOR_MAX_PERCENT,                COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_brightness = color_remap_long_long(round((value_double*100)),      COLOR_MIN,                 COLOR_MAX_PERCENT,                COLOR_MIN, (COLOR_MAX_UINT32-1));
+        long long long_colortemp  = color_remap_long_long(colortemp_double,               COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC,        COLOR_MIN, (COLOR_MAX_UINT32-1));
 
         printf("Calculated hue double: %f\n", hue_double);
         printf("Calculated saturation double: %f\n", saturation_double);
@@ -2367,6 +2401,11 @@ bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT
             cout << "Ignoring request on behalf of user id: " << user_id << " Name: " << user_name << endl << flush;
             return false;
         }
+    }
+
+    if(!muzzley_lamplist_check_lamp(component)){
+        cout << "Received request for unknown lamp id: " << component << " from iser id: " << user_id << " Name: " << user_name << endl << flush;
+        return false;
     }
 
     muzzley_query_unknown_lampnames(&lampManager);
@@ -2774,6 +2813,11 @@ bool muzzley_handle_plug_request(muzzley::JSONObjT _data){
             cout << "Ignoring request on behalf of user id: " << user_id << " Name: " << user_name << endl << flush;
             return false;
         }
+    }
+
+    if(!muzzley_plug_vector_check(component)){
+        cout << "Received request for unknown plug id: " << component << " from iser id: " << user_id << " Name: " << user_name << endl << flush;
+        return false;
     }
 
     print_request_vector();
@@ -3718,7 +3762,7 @@ int main(int argc, char* argv[]){
     
     _muzzley_lighting_client.on(muzzley::AppLoggedIn,[&lampManager] (muzzley::Message& _data, muzzley::Client& _muzzley_lighting_client) -> bool{
         muzzley_lighting_sessionid = (string)_data["d"]["sessionId"];
-        cout << "Lighting logged in with session id: " << muzzley_lighting_sessionid << endl << flush;
+        cout << "Lighting logged in with session id: " << muzzley_lighting_sessionid << endl << endl << flush;
 
         muzzley::Subscription _s1;
         _s1.setNamespace(MUZZLEY_WORKSPACE);
@@ -3730,6 +3774,8 @@ int main(int argc, char* argv[]){
         _muzzley_lighting_client.on(muzzley::Published, _s1, [&lampManager] (muzzley::Message& _data, muzzley::Client& _muzzley_lighting_client) -> bool {
             //_data->prettify(cout);
             //cout << endl << flush;
+            cout << _data << endl << flush;
+
             try{
                 muzzley::JSONObjT m = *_data;
                 muzzley_handle_lighting_request(lampManager, m);
@@ -3745,7 +3791,7 @@ int main(int argc, char* argv[]){
 
     _muzzley_plugs_client.on(muzzley::AppLoggedIn,[] (muzzley::Message& _data, muzzley::Client& _muzzley_plugs_client) -> bool{
         muzzley_plugs_sessionid = (string)_data["d"]["sessionId"];
-        cout << "Plugs logged in with session id: " << muzzley_plugs_sessionid << endl << flush;
+        cout << "Plugs logged in with session id: " << muzzley_plugs_sessionid << endl << endl << flush;
        
         muzzley::Subscription _s1;
         _s1.setNamespace(MUZZLEY_WORKSPACE);
@@ -3757,6 +3803,8 @@ int main(int argc, char* argv[]){
         _muzzley_plugs_client.on(muzzley::Published, _s1, [] (muzzley::Message& _data, muzzley::Client& _muzzley_plugs_client) -> bool {
             //_data->prettify(cout);
             //cout << endl << flush;
+            cout << _data << endl << flush;
+
             try{
                 muzzley::JSONObjT m = *_data;
                 muzzley_handle_plug_request(m);
