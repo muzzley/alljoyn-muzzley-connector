@@ -2210,14 +2210,14 @@ bool muzzley_handle_lighting_write_RGB_request(LampManager& lampManager, string 
     }
 }
 
-bool muzzley_handle_lighting_write_HSV_request(LampManager& lampManager, string component, int hue, int saturation, int value){
+bool muzzley_handle_lighting_write_HSVT_request(LampManager& lampManager, string component, int hue, int saturation, int value, int colortemp){
     int status;
     try{
         
-        double hue_double        = color_remap_double(hue,                            COLOR_MIN,                  COLOR_MAX_360DEG,          COLOR_MIN,                 COLOR_DOUBLE_MAX);
-        double saturation_double = color_remap_double(saturation,                     COLOR_MIN,                  COLOR_MAX_PERCENT,         COLOR_MIN,                 COLOR_DOUBLE_MAX);
-        double value_double      = color_remap_double(value,                          COLOR_MIN,                  COLOR_MAX_PERCENT,         COLOR_MIN,                 COLOR_DOUBLE_MAX);
-        double colortemp_double  = color_remap_double(COLOR_TEMPERATURE_DEFAULT_DEC,  COLOR_TEMPERATURE_MIN_DEC,  COLOR_TEMPERATURE_MAX_DEC, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
+        double hue_double        = color_remap_double(hue,        COLOR_MIN,                  COLOR_MAX_360DEG,          COLOR_MIN,                 COLOR_DOUBLE_MAX);
+        double saturation_double = color_remap_double(saturation, COLOR_MIN,                  COLOR_MAX_PERCENT,         COLOR_MIN,                 COLOR_DOUBLE_MAX);
+        double value_double      = color_remap_double(value,      COLOR_MIN,                  COLOR_MAX_PERCENT,         COLOR_MIN,                 COLOR_DOUBLE_MAX);
+        double colortemp_double  = color_remap_double(colortemp,  COLOR_TEMPERATURE_MIN_DEC,  COLOR_TEMPERATURE_MAX_DEC, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
         
 
         long long long_hue        = color_remap_long_long(round((hue_double*100)),        COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, (COLOR_MAX_UINT32-1));
@@ -2241,44 +2241,6 @@ bool muzzley_handle_lighting_write_HSV_request(LampManager& lampManager, string 
             cout << "LampManager Error!" << endl << flush;
         if(status == 1)
             cout << "No lighting controller service running!" << endl << flush;
-        return true; 
-    }catch(exception& e){
-        cout << "Exception: " << e.what() << endl << flush;
-        return false;
-    }
-}
-
-bool muzzley_handle_lighting_write_HSVT_request(LampManager& lampManager, string component, int hue, int saturation, int value, int colortemp){
-    int status;
-    try{
-        
-        double hue_double        = color_remap_double(hue,        COLOR_MIN,                    COLOR_MAX_360DEG,          COLOR_MIN,                 COLOR_DOUBLE_MAX);
-        double saturation_double = color_remap_double(saturation, COLOR_MIN,                    COLOR_MAX_PERCENT,         COLOR_MIN,                 COLOR_DOUBLE_MAX);
-        double value_double      = color_remap_double(value,      COLOR_MIN,                    COLOR_MAX_PERCENT,         COLOR_MIN,                 COLOR_DOUBLE_MAX);
-        double colortemp_double  = color_remap_double(colortemp,  COLOR_TEMPERATURE_MIN_DEC,    COLOR_TEMPERATURE_MAX_DEC, COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
-
-        long long long_hue        = color_remap_long_long(round(hue_double),              COLOR_MIN,                 COLOR_MAX_360DEG,                 COLOR_MIN, (COLOR_MAX_UINT32-1));
-        long long long_saturation = color_remap_long_long(round((saturation_double*100)), COLOR_MIN,                 COLOR_MAX_PERCENT,                COLOR_MIN, (COLOR_MAX_UINT32-1));
-        long long long_brightness = color_remap_long_long(round((value_double*100)),      COLOR_MIN,                 COLOR_MAX_PERCENT,                COLOR_MIN, (COLOR_MAX_UINT32-1));
-        long long long_colortemp  = color_remap_long_long(colortemp_double,               COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC,        COLOR_MIN, (COLOR_MAX_UINT32-1));
-
-        printf("Calculated hue double: %f\n", hue_double);
-        printf("Calculated saturation double: %f\n", saturation_double);
-        printf("Calculated value double: %f\n", value_double);
-        printf("Calculated colortemp double: %f\n", colortemp_double);
-        printf("Brightness: %lld\n", long_brightness);
-        printf("Hue: %lld\n", long_hue);
-        printf("Saturation: %lld\n", long_saturation);
-        printf("ColorTemp: %lld\n", long_colortemp);
-        
-        //onoff/Hue/Saturation/Colortemp/Brightness
-        LampState state(true, long_hue, long_saturation, long_colortemp, long_brightness);
-        status = lampManager.TransitionLampState(component, state);
-        if(status != LSF_OK)
-            cout << "LampManager Error!" << endl << flush;
-        if(status == 1)
-            cout << "No lighting controller service running!" << endl << flush;
-        return true; 
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
@@ -2357,7 +2319,7 @@ bool muzzley_handle_lighting_write_colorname_request(LampManager& lampManager, s
             value=0;
         }
 
-        if(muzzley_handle_lighting_write_HSV_request(lampManager, component, hue, saturation, value))
+        if(muzzley_handle_lighting_write_HSVT_request(lampManager, component, hue, saturation, value, COLOR_TEMPERATURE_DEFAULT_DEC))
             return true;
         else
             return false; 
@@ -2433,7 +2395,7 @@ bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT
             int hue        = (int)_data["d"]["p"]["data"]["value"]["h"];
             int saturation = (int)_data["d"]["p"]["data"]["value"]["s"];
             int value      = (int)_data["d"]["p"]["data"]["value"]["v"];
-            muzzley_handle_lighting_write_HSV_request(lampManager, component, hue, saturation, value);
+            muzzley_handle_lighting_write_HSVT_request(lampManager, component, hue, saturation, value, COLOR_TEMPERATURE_DEFAULT_DEC);
         }
         if(property==PROPERTY_COLOR_HSVT){
             int hue        = (int)_data["d"]["p"]["data"]["value"]["h"];
