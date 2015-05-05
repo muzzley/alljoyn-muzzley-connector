@@ -3322,8 +3322,8 @@ void cleanup() {
 
 void upnp_info(string urn, string host, string xml_file_path, int port,
             string interface, string friendlyname,string udn, string serialnumber,
-            string manufacturer, string manufacturer_url, string modelname,
-            string modelnumber, string modeldescription){
+            string macaddress, string manufacturer, string manufacturer_url,
+            string modelname, string modelnumber, string modeldescription){
 
     cout << "URN: " << urn << endl << flush;
     cout << "HOST: " << host << endl << flush;
@@ -3333,6 +3333,7 @@ void upnp_info(string urn, string host, string xml_file_path, int port,
     cout << "FRIENDLY NAME: " << friendlyname << endl << flush;
     cout << "UDN: " << udn << endl << flush;
     cout << "SERIAL NUMBER: " << serialnumber << endl << flush;
+    cout << "MAC ADDRESS: " << macaddress << endl << flush;
     cout << "MANUFACTURER: " << manufacturer << endl << flush;
     cout << "MANUFACTURER URL: " << manufacturer_url << endl << flush;
     cout << "MODEL NAME: " << modelname << endl << flush;
@@ -3426,11 +3427,11 @@ void upnp_info_print(){
     cout << endl << "GUPNP LIGHTING INFO:" << endl << flush;
     upnp_info(muzzley_lighting_upnp_urn, muzzley_lighting_upnp_host, muzzley_lighting_upnp_xml_filepath, muzzley_lighting_upnp_port,
             muzzley_lighting_upnp_interface, muzzley_lighting_upnp_friendlyname, muzzley_lighting_upnp_udn, muzzley_lighting_upnp_serialnumber,
-            muzzley_manufacturer, muzzley_manufacturer_url, muzzley_modelname, muzzley_modelnumber, muzzley_modeldescription);
+            muzzley_lighting_macAddress, muzzley_manufacturer, muzzley_manufacturer_url, muzzley_modelname, muzzley_modelnumber, muzzley_modeldescription);
     cout << endl << "GUPNP PLUGS INFO:" << endl << flush;
     upnp_info(muzzley_plugs_upnp_urn, muzzley_plugs_upnp_host, muzzley_plugs_upnp_xml_filepath, muzzley_plugs_upnp_port,
             muzzley_plugs_upnp_interface, muzzley_plugs_upnp_friendlyname, muzzley_plugs_upnp_udn, muzzley_plugs_upnp_serialnumber,
-            muzzley_manufacturer, muzzley_manufacturer_url, muzzley_modelname, muzzley_modelnumber, muzzley_modeldescription);
+            muzzley_plugs_macAddress, muzzley_manufacturer, muzzley_manufacturer_url, muzzley_modelname, muzzley_modelnumber, muzzley_modeldescription);
 }
 
 void cmd_line_parser_help(){
@@ -3552,8 +3553,8 @@ int main(int argc, char* argv[]){
 
 
     //Get MACAdress info from the current network interface in use
-    muzzley_lighting_macAddress = get_iface_macAdress(muzzley_network_interface);
-       muzzley_plugs_macAddress = get_iface_macAdress(muzzley_network_interface);
+    muzzley_lighting_macAddress = get_iface_macAdress(muzzley_lighting_upnp_interface);
+       muzzley_plugs_macAddress = get_iface_macAdress(muzzley_plugs_upnp_interface);
 
     //Parse cmd line custom Muzzley tokens
     if(argc>1){
