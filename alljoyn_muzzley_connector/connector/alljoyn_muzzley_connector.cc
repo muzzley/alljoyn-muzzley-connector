@@ -691,6 +691,10 @@ void print_request_vector(){
     cout << "---END---" << endl << endl << flush;
 }
 
+int get_request_vector_size(){
+    return req_vec.size();
+}
+
 int get_request_vector_pos(string component, string property){
     try{
         for (unsigned int i = 0; i < req_vec.size(); i++){
@@ -923,6 +927,7 @@ bool muzzley_lamplist_check_lamp(string lampID){
     try{
         LSFStringList::const_iterator it = lampIDs.begin();
         string lampName;
+        string component;
         bool found = false;
         bool replace = false;
 
@@ -939,17 +944,19 @@ bool muzzley_lamplist_check_lamp(string lampID){
                 found = false;
 
                 it = lampIDs.begin();
+                component=local_it->first;
+                lampName = muzzley_lamplist_get_lampname(component);
                 for (; it != lampIDs.end(); ++it) {
-                    if(!strcmp(local_it->first.c_str(), (*it).data())){
+                    if(!strcmp(component.c_str(), (*it).data())){
+                        cout << "Found Lamp id: " << component << " Name: " << lampName << endl << flush;
                         found = true;
-                        cout << "Found Lamp id: " << (*it).data() << " Name: " << local_it->second << endl << flush; 
                     }
                 }
 
                 if(!found){
-                    lampName = muzzley_lamplist_get_lampname(local_it->first);
-                    muzzley_lamplist_del_lamp(local_it->first);
-                    cout << "Deleting Lamp id: " << local_it->first << " Name: " << lampName << endl << flush;
+                    lampName = muzzley_lamplist_get_lampname(component);
+                    cout << "Deleting Lamp id: " << component << " Name: " << lampName << endl << flush;
+                    muzzley_lamplist_del_lamp(component);
                     replace = true;
                 }
             }
@@ -2370,10 +2377,7 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
 bool muzzley_handle_lighting_write_status_request(LampManager* lampManager, string component, bool bool_status){
     int status;
     try{
-        int semaphore = semaphore_start();
-        semaphore_lock(semaphore);
         status = lampManager->TransitionLampStateOnOffField(component, bool_status);
-        semaphore_unlock(semaphore);
         if(status != LSF_OK)
             cout << "LampManager Error!" << endl << flush;
         if(status == 1)
@@ -2394,10 +2398,7 @@ bool muzzley_handle_lighting_write_brightness_request(LampManager* lampManager, 
         printf("Received brightness double: %f\n", brightness);
         printf("Received brightness long: %lld\n", long_brightness);
 
-        int semaphore = semaphore_start();
-        semaphore_lock(semaphore);
         status = lampManager->TransitionLampStateBrightnessField(component, long_brightness);
-        semaphore_unlock(semaphore);
         if(status != LSF_OK)
             cout << "LampManager Error!" << endl << flush;
         if(status == 1)
@@ -2435,10 +2436,8 @@ bool muzzley_handle_lighting_write_HSVT_request(LampManager* lampManager, string
    
         //onoff/Hue/Saturation/Colortemp/Brightness
         LampState state(true, long_hue, long_saturation, long_colortemp, long_brightness);
-        int semaphore = semaphore_start();
-        semaphore_lock(semaphore);
         status = lampManager->TransitionLampState(component, state);
-        semaphore_unlock(semaphore);
+
         if(status != LSF_OK)
             cout << "LampManager Error!" << endl << flush;
         if(status == 1)
@@ -2561,10 +2560,8 @@ bool muzzley_handle_lighting_read_request(LampManager* lampManager, string compo
     try{
         add_request_vector_pos(component, property, cid, t, DEVICE_BULB);
         if(!strcmp(property.c_str(), PROPERTY_REACHABLE)){
-            int semaphore = semaphore_start();
-            semaphore_lock(semaphore);
             int status = lampManager->GetLampState(component);
-            semaphore_unlock(semaphore);
+
             usleep(LSF_LAMPMANAGER_SLEEP);
             if(status != LSF_OK){
                 cout << "LampManager Error!" << endl << flush;
@@ -2612,12 +2609,9 @@ bool muzzley_handle_lighting_request(LampManager* lampManager, muzzley::JSONObjT
             
             muzzley_handle_lighting_request_unreachable(component, _client);
             
-            int semaphore = semaphore_start();
-            semaphore_lock(semaphore);
+           
             int status = lampManager->GetAllLampIDs();
-            semaphore_unlock(semaphore);
             muzzley_query_unknown_lampnames(lampManager);
-            semaphore_unlock(semaphore);
             usleep(LSF_LAMPMANAGER_SLEEP);
             return false;
         }
@@ -3208,6 +3202,19 @@ public:
             printf("\n\n");
             lampList.clear();
             lampList = lampIDs;
+
+
+            int size=0;
+            string component;
+            if(lampIDs.size()==0){
+                size = get_request_vector_size();
+                if(size>0){
+                   for(int i=0; i<size; i++){
+                        component = get_request_vector_component(i);
+                        muzzley_handle_lighting_request_unreachable(component, this->_client);
+                    } 
+                }
+            }
 
             if(!muzzley_lamplist_replace_lamplist(lampIDs))
                 muzzley_replace_lighting_components();
@@ -3840,10 +3847,7 @@ void muzzley_read_request_cleaner(){
 void muzzley_update_lamplist(LampManager* lampManager){
     while(true){
         //Update lampList
-        int semaphore = semaphore_start();
-        semaphore_lock(semaphore);
         int status = lampManager->GetAllLampIDs();
-        semaphore_unlock(semaphore);
         usleep(LSF_LAMPMANAGER_SLEEP);
         muzzley_query_unknown_lampnames(lampManager);
         sleep(MUZZLEY_DEFAULT_STATUS_INTERVAL);
