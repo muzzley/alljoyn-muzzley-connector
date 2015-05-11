@@ -147,10 +147,12 @@
 
 #define GUPNP_MAX_AGE 1800
 #define GUPNP_MESSAGE_DELAY 120
+#define LSF_LAMPMANAGER_SLEEP 200000
 
 #define DEVICE_PLUG "plug"
 #define DEVICE_BULB "bulb"
 #define DEVICE_BRIDGE "bridge"
+#define PROPERTY_REACHABLE "reachable"
 #define PROPERTY_STATUS "status"
 #define PROPERTY_COLOR_RGB "color"
 #define PROPERTY_COLOR_HSV "color-hsv"
@@ -241,9 +243,14 @@ int muzzley_api_port=0;
 int muzzley_manager_port=0;
 bool muzzley_OnBehalfOf=true;
 
+bool muzzley_controllerclient_connected=false;
+string muzzley_controllerclient_status="";
+string muzzley_controllerclient_version="";
+bool muzzley_controllerservice_connected=false;
 LSFString muzzley_controllerservice_id;
 LSFString muzzley_controllerservice_name;
-bool muzzley_controllerservice_connected=false;
+
+
 bool muzzley_lighting_registered=false;
 bool muzzley_plugs_registered=false;
 LSFStringList lampList;
@@ -272,6 +279,13 @@ vector <alljoyn_plug> plug_vec;
 unordered_map <string, string> muzzley_lamplist;
 
 muzzley::Client _muzzley_plugs_client;
+
+void lsf_controller_client_print(){
+    cout << endl << "ALLJOYN LSF CONTROLLER CLIENT INFO:" << endl << flush;
+    cout << "CONTROLLER CLIENT CONNECTED: " << muzzley_controllerclient_connected << endl << flush;
+    cout << "CONTROLLER CLIENT STATUS: " << muzzley_controllerclient_status << endl << flush;
+    cout << "CONTROLLER CLIENT VERSION: " << muzzley_controllerclient_version << endl << endl << flush;
+}
 
 void lsf_controller_service_print(){
     cout << endl << "ALLJOYN LSF CONTROLLER SERVICE INFO:" << endl << flush;
@@ -680,8 +694,8 @@ void print_request_vector(){
 int get_request_vector_pos(string component, string property){
     try{
         for (unsigned int i = 0; i < req_vec.size(); i++){
-            if(get<0>(req_vec[i])==component){
-                if(get<1>(req_vec[i])==property){
+            if(!strcmp(get<0>(req_vec[i]).c_str(), component.c_str())){
+                if(!strcmp(get<1>(req_vec[i]).c_str(), property.c_str())){
                     cout << "Muzzley pending request found on pos#: " << i << endl << flush; 
                     return i;
                 }
@@ -693,6 +707,15 @@ int get_request_vector_pos(string component, string property){
         cout << "Exception: " << e.what() << endl << flush;
         return -1;
     }
+}
+
+string get_request_vector_component(int pos){
+    try{
+        return get<0>(req_vec[pos]);
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return "";
+    }    
 }
 
 string get_request_vector_CID(int pos){
@@ -723,37 +746,81 @@ bool delete_request_vector_pos(int pos){
     }    
 }
 
-bool muzzley_clean_request_vector(){
-    for (unsigned int i = 0; i < req_vec.size(); i++){
-        double req_duration = difftime(time(0), get<4>(req_vec[i]));
-        if(req_duration>MUZZLEY_READ_REQUEST_TIMEOUT){
-            cout << endl << "Erased muzzley read request (timeout):" << endl << flush;
-            print_request_pos(i);
-            req_vec.erase(req_vec.begin()+i);
-        }
+bool add_request_vector_pos(string component, string property, string cid, int t, string type){
+    try{
+        time_t tm = std::time(0);
+        req_vec.push_back(make_tuple(component, property, cid, t, tm, type));
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
     }
-    return true;
+}
+
+bool muzzley_clean_request_component(string componentId){
+    try{
+       for (unsigned int i = 0; i < req_vec.size(); i++){
+            string tmp = get_request_vector_component(i);
+            if(!strcmp(tmp.c_str(), componentId.c_str())){
+                cout << endl << "Erased muzzley read request:" << endl << flush;
+                print_request_pos(i);
+                req_vec.erase(req_vec.begin()+i); 
+            }
+        }
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+
+}
+
+bool muzzley_clean_request_vector(){
+    try{
+        for (unsigned int i = 0; i < req_vec.size(); i++){
+            double req_duration = difftime(time(0), get<4>(req_vec[i]));
+            if(req_duration>MUZZLEY_READ_REQUEST_TIMEOUT){
+                cout << endl << "Erased muzzley read request (timeout):" << endl << flush;
+                print_request_pos(i);
+                req_vec.erase(req_vec.begin()+i);
+            }
+        }
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+
 }
 
 bool muzzley_query_unknown_lampnames(LampManager* lampManager){
-    int status;
-    for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
-        for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
-            if(local_it->second ==  MUZZLEY_UNKNOWN_NAME){
-                cout << endl << "Quering unknown lamp name for id: " << local_it->first << endl << flush;
-                status = lampManager->GetLampName(local_it->first);
-                if (status == LSF_ERR_FAILURE){
-                    return false;
+    try{
+        int status;
+        for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+            for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
+                if(local_it->second ==  MUZZLEY_UNKNOWN_NAME){
+                    cout << endl << "Quering unknown lamp name for id: " << local_it->first << endl << flush;
+                    int semaphore = semaphore_start();
+                    semaphore_lock(semaphore);
+                    status = lampManager->GetLampName(local_it->first);
+                    semaphore_unlock(semaphore);
+                    if (status == LSF_ERR_FAILURE){
+                        return false;
+                    }
                 }
             }
         }
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
     }
-    return true;
 }
 
 
 bool muzzley_lamplist_update_lampname(string lampID, string lampName){
-    for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+    try{
+        for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
         for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
             if(local_it->first == lampID){
                 cout << endl << "Updating lamp name for id: " << local_it->first << endl << flush;
@@ -764,55 +831,151 @@ bool muzzley_lamplist_update_lampname(string lampID, string lampName){
     }
     muzzley_lamplist[lampID] = lampName;
     cout << endl << "Added new lamp info for id: " << lampID << endl << flush;
-    return true;
+    return true; 
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }   
+}
+
+bool muzzley_lamplist_add_lamp(string lampID, string lampName){
+    try{
+        muzzley_lamplist[lampID.c_str()]=lampName;
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
 }
 
 string muzzley_lamplist_get_lampname(string lampID){
-    for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
-        for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
-            if(local_it->first == lampID.data()){
-                //cout << endl << "Found lamp:" << endl << flush;
-                if(local_it->second != MUZZLEY_UNKNOWN_NAME){
-                    //cout << "id: " << local_it->first << " Name: " << local_it->second << endl << flush;
-                    return local_it->second;
+    try{
+        for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+            for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
+                if(local_it->first == lampID.data()){
+                    //cout << endl << "Found lamp:" << endl << flush;
+                    if(local_it->second != MUZZLEY_UNKNOWN_NAME){
+                        //cout << "id: " << local_it->first << " Name: " << local_it->second << endl << flush;
+                        return local_it->second;
+                    }
                 }
             }
         }
-    }
-    return MUZZLEY_UNKNOWN_NAME;
+        return MUZZLEY_UNKNOWN_NAME;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return MUZZLEY_UNKNOWN_NAME;
+    } 
 }
 
+
 bool muzzley_lamplist_del_lamp(string lampID){
-   for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
-        for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
-            if(strcmp(local_it->first.c_str(), lampID.c_str())==0){
-                muzzley_lamplist.erase(lampID);
-                return true;
+    try{
+        for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+            for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
+                if(strcmp(local_it->first.c_str(), lampID.c_str())==0){
+                    muzzley_lamplist.erase(lampID);
+                    return true;
+                }
             }
         }
+        return false;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
     }
-    return false;
+}
+
+bool muzzley_lamplist_del_all_lamps(){
+    try{
+        for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+            for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
+                if(!muzzley_lamplist_del_lamp(local_it->first)){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+
 }
 
 bool muzzley_lamplist_check_lamp(string lampID){
-   for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
-        for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
-            if(strcmp(local_it->first.c_str(), lampID.c_str())==0){
-                return true;
+    try{
+        for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+            for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
+                if(strcmp(local_it->first.c_str(), lampID.c_str())==0){
+                    return true;
+                }
             }
         }
+        return false;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
     }
-    return false;
+}
+
+ bool muzzley_lamplist_replace_lamplist(const LSFStringList& lampIDs){
+    try{
+        LSFStringList::const_iterator it = lampIDs.begin();
+        string lampName;
+        bool found = false;
+        bool replace = false;
+
+        for (; it != lampIDs.end(); ++it) {
+            if(!muzzley_lamplist_check_lamp((*it).data()))
+                replace = true;
+            lampName = muzzley_lamplist_get_lampname((*it).data());
+            muzzley_lamplist_add_lamp((*it).data(), lampName);
+            cout << "Updating Lamp id: " << (*it).data() << " Name: " << lampName << endl << flush; 
+        }
+       
+        for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+            for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
+                found = false;
+
+                it = lampIDs.begin();
+                for (; it != lampIDs.end(); ++it) {
+                    if(!strcmp(local_it->first.c_str(), (*it).data())){
+                        found = true;
+                        cout << "Found Lamp id: " << (*it).data() << " Name: " << local_it->second << endl << flush; 
+                    }
+                }
+
+                if(!found){
+                    lampName = muzzley_lamplist_get_lampname(local_it->first);
+                    muzzley_lamplist_del_lamp(local_it->first);
+                    cout << "Deleting Lamp id: " << local_it->first << " Name: " << lampName << endl << flush;
+                    replace = true;
+                }
+            }
+        }
+        cout << endl << flush;
+        if(replace)
+           return false;
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }   
 }
 
 void muzzley_lamplist_print(){
-    cout << endl << "Lamplist: " << endl << flush;
-    for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
-        for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
-            cout << "id: " << local_it->first << " Name: " << local_it->second << endl << flush;
+    try{
+        cout << endl << "Lamplist: " << endl << flush;
+        for ( unsigned i = 0; i < muzzley_lamplist.bucket_count(); ++i) {
+            for ( auto local_it = muzzley_lamplist.begin(i); local_it!= muzzley_lamplist.end(i); ++local_it ){
+                cout << "id: " << local_it->first << " Name: " << local_it->second << endl << flush;
+            }
         }
-    }
-    cout << "---END---" << endl << endl << flush;
+        cout << "---END---" << endl << endl << flush;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+    } 
 }
 
 void gupnp_generate_lighting_XML(){
@@ -1675,6 +1838,72 @@ bool muzzley_remove_plugs_component(string plug_id, string plug_name){
     return true;
 }
 
+
+bool muzzley_publish_lampReachable(LSFString lampID, bool reachable, muzzley::Client* _muzzley_lighting_client){
+    try{
+        
+        int semaphore = semaphore_start();
+
+        muzzley::Subscription _s1;
+        _s1.setNamespace(MUZZLEY_WORKSPACE);
+        _s1.setProfile(muzzley_lighting_profileid);
+        _s1.setChannel(muzzley_lighting_deviceKey);
+        _s1.setComponent(lampID);
+        _s1.setProperty(PROPERTY_REACHABLE);
+
+        muzzley::Message _m1;
+        int pos = get_request_vector_pos(lampID, PROPERTY_REACHABLE);
+
+        
+        while(pos!=-1){
+            _m1.setStatus(true);
+            _m1.setCorrelationID(get_request_vector_CID(pos));
+            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
+            _m1.setData(JSON(
+               "value" <<  reachable <<
+               "profile" << muzzley_lighting_profileid <<
+               "channel" << muzzley_lighting_deviceKey <<
+               "component" << lampID <<
+               "property" << PROPERTY_REACHABLE <<
+               "data" << JSON(
+                   "value" <<  reachable
+                   )
+            ));
+
+            //cout << _s1 << endl << flush;
+            //cout << _m1 << endl << flush;
+            semaphore_lock(semaphore);
+            _muzzley_lighting_client->reply(_m1, _m1);
+            semaphore_unlock(semaphore);
+            delete_request_vector_pos(pos);
+            cout << "Replyed bulb reachable status!" << endl << flush;
+
+            pos = get_request_vector_pos(lampID, PROPERTY_REACHABLE);
+            if(pos==-1)
+                return true;
+        }
+    
+        _m1.setData(JSON(
+            "io" << "i" <<
+            "data" << JSON(
+               "value" <<  reachable
+            )
+        ));
+
+        //cout << _s1 << endl << flush;
+        //cout << _m1 << endl << flush;
+        semaphore_lock(semaphore);
+        _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
+        semaphore_unlock(semaphore);
+        cout << "Published bulb reachable status!" << endl << flush;
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+    
+}
+
 bool muzzley_publish_lampState(LSFString lampID, bool onoff, muzzley::Client* _muzzley_lighting_client){
     try{
         
@@ -1690,7 +1919,7 @@ bool muzzley_publish_lampState(LSFString lampID, bool onoff, muzzley::Client* _m
         muzzley::Message _m1;
         int pos = get_request_vector_pos(lampID, PROPERTY_STATUS);
         
-        if(pos!=-1){
+        while(pos!=-1){
             _m1.setStatus(true);
             _m1.setCorrelationID(get_request_vector_CID(pos));
             _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
@@ -1712,7 +1941,10 @@ bool muzzley_publish_lampState(LSFString lampID, bool onoff, muzzley::Client* _m
             semaphore_unlock(semaphore);
             delete_request_vector_pos(pos);
             cout << "Replyed bulb status!" << endl << flush;
-            return true;
+
+            pos = get_request_vector_pos(lampID, PROPERTY_STATUS);
+            if(pos==-1)
+                return true;
         }
             
         _m1.setData(JSON(
@@ -1727,6 +1959,7 @@ bool muzzley_publish_lampState(LSFString lampID, bool onoff, muzzley::Client* _m
         semaphore_lock(semaphore);
         _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
         semaphore_unlock(semaphore);
+         cout << "Published bulb status!" << endl << flush;
         return true;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -1750,7 +1983,7 @@ bool muzzley_publish_brightness(LSFString lampID, double brightness, muzzley::Cl
         muzzley::Message _m1;
 
         int pos = get_request_vector_pos(lampID, PROPERTY_BRIGHTNESS);
-        if(pos!=-1){
+        while(pos!=-1){
             _m1.setStatus(true);
             _m1.setCorrelationID(get_request_vector_CID(pos));
             _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
@@ -1772,7 +2005,10 @@ bool muzzley_publish_brightness(LSFString lampID, double brightness, muzzley::Cl
             semaphore_unlock(semaphore);
             delete_request_vector_pos(pos);
             cout << "Replyed bulb brightness!" << endl << flush;
-            return true;
+
+            pos = get_request_vector_pos(lampID, PROPERTY_BRIGHTNESS);
+            if(pos==-1)
+                return true;
         }
          
        _m1.setData(JSON(
@@ -1787,6 +2023,7 @@ bool muzzley_publish_brightness(LSFString lampID, double brightness, muzzley::Cl
         semaphore_lock(semaphore);
         _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
         semaphore_unlock(semaphore);
+        cout << "Published bulb brightness!" << endl << flush;
         return true;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -1812,7 +2049,7 @@ bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blu
         muzzley::Message _m1;
 
         int pos = get_request_vector_pos(lampID, PROPERTY_COLOR_RGB);
-        if(pos!=-1){
+        while(pos!=-1){
             _m1.setStatus(true);
             _m1.setCorrelationID(get_request_vector_CID(pos));
             _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
@@ -1842,7 +2079,10 @@ bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blu
             semaphore_unlock(semaphore);
             delete_request_vector_pos(pos);
             cout << "Replyed bulb color!" << endl << flush;
-            return true;
+
+            pos = get_request_vector_pos(lampID, PROPERTY_COLOR_RGB);
+            if(pos==-1)
+                return true;
         }
       
         _m1.setData(JSON(
@@ -1861,6 +2101,7 @@ bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blu
         semaphore_lock(semaphore);
         _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
         semaphore_unlock(semaphore);
+        cout << "Published bulb color!" << endl << flush;
         return true;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -1884,7 +2125,7 @@ bool muzzley_publish_lampColor_hsv(LSFString lampID, int hue, int saturation, in
         muzzley::Message _m1;
 
         int pos = get_request_vector_pos(lampID, PROPERTY_COLOR_HSV);
-        if(pos!=-1){
+        while(pos!=-1){
             _m1.setStatus(true);
             _m1.setCorrelationID(get_request_vector_CID(pos));
             _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
@@ -1914,7 +2155,10 @@ bool muzzley_publish_lampColor_hsv(LSFString lampID, int hue, int saturation, in
             semaphore_unlock(semaphore);
             delete_request_vector_pos(pos);
             cout << "Replyed bulb color hsv!" << endl << flush;
-            return true;
+
+            pos = get_request_vector_pos(lampID, PROPERTY_COLOR_HSV);
+            if(pos==-1)
+                return true;
         }
       
         _m1.setData(JSON(
@@ -1933,6 +2177,7 @@ bool muzzley_publish_lampColor_hsv(LSFString lampID, int hue, int saturation, in
         semaphore_lock(semaphore);
         _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
         semaphore_unlock(semaphore);
+        cout << "Published bulb color hsv!" << endl << flush;
         return true;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -1956,7 +2201,7 @@ bool muzzley_publish_lampColor_hsvt(LSFString lampID, int hue, int saturation, i
         muzzley::Message _m1;
 
         int pos = get_request_vector_pos(lampID, PROPERTY_COLOR_HSVT);
-        if(pos!=-1){
+        while(pos!=-1){
             _m1.setStatus(true);
             _m1.setCorrelationID(get_request_vector_CID(pos));
             _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
@@ -1988,7 +2233,10 @@ bool muzzley_publish_lampColor_hsvt(LSFString lampID, int hue, int saturation, i
             semaphore_unlock(semaphore);
             delete_request_vector_pos(pos);
             cout << "Replyed bulb color hsvt!" << endl << flush;
-            return true;
+
+            pos = get_request_vector_pos(lampID, PROPERTY_COLOR_HSVT);
+            if(pos==-1)
+                return true;
         }
       
         _m1.setData(JSON(
@@ -2008,6 +2256,7 @@ bool muzzley_publish_lampColor_hsvt(LSFString lampID, int hue, int saturation, i
         semaphore_lock(semaphore);
         _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
         semaphore_unlock(semaphore);
+        cout << "Published bulb color hsvt!" << endl << flush;
         return true;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -2051,20 +2300,15 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         long long saturation_int = color_remap_long_long(long_saturation, COLOR_MIN, (COLOR_MAX_UINT32-1), COLOR_MIN,                 COLOR_MAX_PERCENT);
         long long colortemp_int  = color_remap_long_long(long_colortemp,  COLOR_MIN, (COLOR_MAX_UINT32-1), COLOR_TEMPERATURE_MIN_DEC, COLOR_TEMPERATURE_MAX_DEC);
 
+        
+        muzzley_publish_lampReachable(lampID, true, _muzzley_lighting_client);
+          
         if(strcmp(muzzley_color_mode.c_str(), PROPERTY_COLOR_HSV)==0){
-        	if(muzzley_publish_lampColor_hsv(lampID, hue_int, saturation_int, brightness_int, _muzzley_lighting_client)==false){
-            	cout  << "Error publishing lampcolorHSV to muzzley" << endl << flush;
-	        }else{
-	            cout  << "Published lampcolorHSV to muzzley sucessfully" << endl << flush;
-	        }
+        	muzzley_publish_lampColor_hsv(lampID, hue_int, saturation_int, brightness_int, _muzzley_lighting_client);
         }
         
         if(strcmp(muzzley_color_mode.c_str(), PROPERTY_COLOR_HSVT)==0){
-        	if(muzzley_publish_lampColor_hsvt(lampID, hue_int, saturation_int, brightness_int, colortemp_int, _muzzley_lighting_client)==false){
-            	cout  << "Error publishing lampcolorHSVT to muzzley" << endl << flush;
-	        }else{
-	            cout  << "Published lampcolorHSVT to muzzley sucessfully" << endl << flush;
-	        }
+        	muzzley_publish_lampColor_hsvt(lampID, hue_int, saturation_int, brightness_int, colortemp_int, _muzzley_lighting_client);
         }
 
         std::cout <<  "\n{\"onOff\": " << onoff << "," << std::endl;
@@ -2084,19 +2328,11 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         printf("ColorTemp: %lld\n\n", colortemp_int);
 
 
-        if(muzzley_publish_lampState(lampID, onoff_state, _muzzley_lighting_client)==false){
-            cout << "Error publishing lamponoffstate to muzzley" << endl << flush;
-        }else{
-            cout << "Published lamponoffstate to muzzley sucessfully" << endl << flush;
-        }
+        muzzley_publish_lampState(lampID, onoff_state, _muzzley_lighting_client);
        
         double value_double = color_remap_double(brightness_int, COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, 1);
-       
-        if(muzzley_publish_brightness(lampID, value_double, _muzzley_lighting_client)==false){
-            cout  << "Error publishing brightness to muzzley" << endl << flush;
-        }else{
-            cout  << "Published brightness to muzzley sucessfully" << endl << flush;
-        }
+        muzzley_publish_brightness(lampID, value_double, _muzzley_lighting_client);
+        
 
         double        hue_double = hue_int;
         double saturation_double = color_remap_double(saturation_int, COLOR_MIN, COLOR_MAX_PERCENT, COLOR_MIN, COLOR_DOUBLE_MAX);
@@ -2121,11 +2357,7 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
         printf("Blue: %d\n\n", blue);
         
         if(strcmp(muzzley_color_mode.c_str(), PROPERTY_COLOR_RGB)==0){
-        	if(muzzley_publish_lampColor_rgb(lampID, red, green, blue, _muzzley_lighting_client)==false){
-            	cout  << "Error publishing lampcolorRGB to muzzley" << endl << flush;
-	        }else{
-	            cout  << "Published lampcolorRGB to muzzley sucessfully" << endl << flush;
-	        }
+        	muzzley_publish_lampColor_rgb(lampID, red, green, blue, _muzzley_lighting_client);
         }
  
         return true;
@@ -2135,10 +2367,13 @@ bool muzzley_parseLampState(LSFString lampID, LampState lampState, muzzley::Clie
     }
 }
 
-bool muzzley_handle_lighting_write_status_request(LampManager& lampManager, string component, bool bool_status){
+bool muzzley_handle_lighting_write_status_request(LampManager* lampManager, string component, bool bool_status){
     int status;
     try{
-        status = lampManager.TransitionLampStateOnOffField(component, bool_status);
+        int semaphore = semaphore_start();
+        semaphore_lock(semaphore);
+        status = lampManager->TransitionLampStateOnOffField(component, bool_status);
+        semaphore_unlock(semaphore);
         if(status != LSF_OK)
             cout << "LampManager Error!" << endl << flush;
         if(status == 1)
@@ -2150,7 +2385,7 @@ bool muzzley_handle_lighting_write_status_request(LampManager& lampManager, stri
     }
 }
 
-bool muzzley_handle_lighting_write_brightness_request(LampManager& lampManager, string component, double brightness){
+bool muzzley_handle_lighting_write_brightness_request(LampManager* lampManager, string component, double brightness){
     int status;
     try{
         brightness = color_remap_double(brightness, COLOR_MIN, COLOR_DOUBLE_MAX, COLOR_MIN, (COLOR_MAX_UINT32-1));
@@ -2159,7 +2394,10 @@ bool muzzley_handle_lighting_write_brightness_request(LampManager& lampManager, 
         printf("Received brightness double: %f\n", brightness);
         printf("Received brightness long: %lld\n", long_brightness);
 
-        status = lampManager.TransitionLampStateBrightnessField(component, long_brightness);
+        int semaphore = semaphore_start();
+        semaphore_lock(semaphore);
+        status = lampManager->TransitionLampStateBrightnessField(component, long_brightness);
+        semaphore_unlock(semaphore);
         if(status != LSF_OK)
             cout << "LampManager Error!" << endl << flush;
         if(status == 1)
@@ -2171,7 +2409,7 @@ bool muzzley_handle_lighting_write_brightness_request(LampManager& lampManager, 
     }
 }
 
-bool muzzley_handle_lighting_write_HSVT_request(LampManager& lampManager, string component, int hue, int saturation, int value, int colortemp){
+bool muzzley_handle_lighting_write_HSVT_request(LampManager* lampManager, string component, int hue, int saturation, int value, int colortemp){
     int status;
     try{
         
@@ -2197,7 +2435,10 @@ bool muzzley_handle_lighting_write_HSVT_request(LampManager& lampManager, string
    
         //onoff/Hue/Saturation/Colortemp/Brightness
         LampState state(true, long_hue, long_saturation, long_colortemp, long_brightness);
-        status = lampManager.TransitionLampState(component, state);
+        int semaphore = semaphore_start();
+        semaphore_lock(semaphore);
+        status = lampManager->TransitionLampState(component, state);
+        semaphore_unlock(semaphore);
         if(status != LSF_OK)
             cout << "LampManager Error!" << endl << flush;
         if(status == 1)
@@ -2208,7 +2449,7 @@ bool muzzley_handle_lighting_write_HSVT_request(LampManager& lampManager, string
     }
 }
 
-bool muzzley_handle_lighting_write_colorname_request(LampManager& lampManager, string component, string colorname){
+bool muzzley_handle_lighting_write_colorname_request(LampManager* lampManager, string component, string colorname){
     try{
         int hue;
         int saturation;
@@ -2290,17 +2531,50 @@ bool muzzley_handle_lighting_write_colorname_request(LampManager& lampManager, s
     }
 }
 
-bool muzzley_handle_lighting_read_request(LampManager& lampManager, string component, string property, string cid, int t){
-    int status;
+bool muzzley_handle_lighting_request_unreachable(string lampID, muzzley::Client* _client){
     try{
-        time_t tm = std::time(0);
-        req_vec.push_back(make_tuple(component, property, cid, t, tm, DEVICE_BULB));
-        status = lampManager.GetLampState(component);
-        if(status != LSF_OK)
-            cout << "LampManager Error!" << endl << flush;
-        if(status == 1)
-            cout << "No lighting controller service running!" << endl << flush;
-        muzzley_clean_request_vector();
+        muzzley_publish_lampReachable(lampID, false, _client);
+        muzzley_publish_lampState(lampID, false, _client);
+        muzzley_publish_brightness(lampID, 0, _client);
+  
+        if(strcmp(muzzley_color_mode.c_str(), PROPERTY_COLOR_HSV)==0){
+            muzzley_publish_lampColor_hsv(lampID, 0, 0, 0, _client);
+        }
+
+        if(strcmp(muzzley_color_mode.c_str(), PROPERTY_COLOR_HSVT)==0){
+            muzzley_publish_lampColor_hsvt(lampID, 0, 0, 0, 0, _client);   
+        }
+
+        if(strcmp(muzzley_color_mode.c_str(), PROPERTY_COLOR_RGB)==0){
+            muzzley_publish_lampColor_rgb(lampID, 0, 0, 0, _client);
+        }
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+    
+}
+
+
+bool muzzley_handle_lighting_read_request(LampManager* lampManager, string component, string property, string cid, int t){
+    try{
+        add_request_vector_pos(component, property, cid, t, DEVICE_BULB);
+        if(!strcmp(property.c_str(), PROPERTY_REACHABLE)){
+            int semaphore = semaphore_start();
+            semaphore_lock(semaphore);
+            int status = lampManager->GetLampState(component);
+            semaphore_unlock(semaphore);
+            usleep(LSF_LAMPMANAGER_SLEEP);
+            if(status != LSF_OK){
+                cout << "LampManager Error!" << endl << flush;
+                return true;
+            }
+            if(status == 1){
+                cout << "No lighting controller service running!" << endl << flush;
+                return false;
+            }
+        }
         return true;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -2308,78 +2582,133 @@ bool muzzley_handle_lighting_read_request(LampManager& lampManager, string compo
     }
 }
 
-bool muzzley_handle_lighting_request(LampManager& lampManager, muzzley::JSONObjT _data){
-    string io = (string)_data["d"]["p"]["io"];
-    string component =  (string)_data["d"]["p"]["component"];
-    string property = (string)_data["d"]["p"]["property"];
-    string user_name = (string)_data["d"]["u"]["name"];
-    string user_id = (string)_data["d"]["u"]["profileId"];
-    bool isOnBehalfOf = (bool)_data["d"]["u"]["isOnBehalfOf"];
-    string cid = (string)_data["h"]["cid"];
-    string ch = (string)_data["h"]["ch"];
-    int t = (int)_data["h"]["t"];
+bool muzzley_handle_lighting_request(LampManager* lampManager, muzzley::JSONObjT _data, muzzley::Client* _client){
+    try{
+        string io = (string)_data["d"]["p"]["io"];
+        string component =  (string)_data["d"]["p"]["component"];
+        string property = (string)_data["d"]["p"]["property"];
+        string user_name = (string)_data["d"]["u"]["name"];
+        string user_id = (string)_data["d"]["u"]["profileId"];
+        bool isOnBehalfOf = (bool)_data["d"]["u"]["isOnBehalfOf"];
+        string cid = (string)_data["h"]["cid"];
+        string ch = (string)_data["h"]["ch"];
+        int t = (int)_data["h"]["t"];
 
-    if(!muzzley_OnBehalfOf){
-        if(isOnBehalfOf){
-            cout << "Ignoring request on behalf of user id: " << user_id << " Name: " << user_name << endl << flush;
+        if(!muzzley_OnBehalfOf){
+            if(isOnBehalfOf){
+                cout << "Ignoring request on behalf of user id: " << user_id << " Name: " << user_name << endl << endl << flush;
+                return false;
+            }
+        }
+
+        if(!muzzley_lamplist_check_lamp(component)){
+            cout << "Received request for: " << property << " Lamp id: " << component << " from user id: " << user_id << " Name: " << user_name << endl << endl << flush;
+            if(io=="r"){
+                if(add_request_vector_pos(component, property, cid, t, DEVICE_BULB))
+                    cout << "Added request sucessfully!!" << endl << flush;
+                else
+                    cout << "Failed to add request " << endl << flush;
+            }
+            
+            muzzley_handle_lighting_request_unreachable(component, _client);
+            
+            int semaphore = semaphore_start();
+            semaphore_lock(semaphore);
+            int status = lampManager->GetAllLampIDs();
+            semaphore_unlock(semaphore);
+            muzzley_query_unknown_lampnames(lampManager);
+            semaphore_unlock(semaphore);
+            usleep(LSF_LAMPMANAGER_SLEEP);
             return false;
         }
-    }
 
-    if(!muzzley_lamplist_check_lamp(component)){
-        cout << "Received request for unknown lamp id: " << component << " from iser id: " << user_id << " Name: " << user_name << endl << flush;
+        print_request_vector();
+
+        if (io=="r"){
+            if(!strcmp(property.c_str(), PROPERTY_REACHABLE)){
+                muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_STATUS)){
+                muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_BRIGHTNESS)){
+                muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_COLOR_RGB)){
+                muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_COLOR_HSV)){
+                muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_COLOR_HSVT)){
+                muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_COLOR_NAME)){
+                muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
+                return true;
+            } else {
+                cout << "Received a request with a unknown property type" << endl << flush;
+                return false;
+           }
+        }
+        if (io=="w"){
+            if(!strcmp(property.c_str(), PROPERTY_STATUS)){
+                bool bool_status = (bool)_data["d"]["p"]["data"]["value"];
+                muzzley_handle_lighting_write_status_request(lampManager, component, bool_status);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_BRIGHTNESS)){
+                double brightness = (double)_data["d"]["p"]["data"]["value"];
+                muzzley_handle_lighting_write_brightness_request(lampManager, component, brightness);
+                return true;   
+            } else if(!strcmp(property.c_str(), PROPERTY_COLOR_RGB)){
+                int red   = (int)_data["d"]["p"]["data"]["value"]["r"];
+                int green = (int)_data["d"]["p"]["data"]["value"]["g"];
+                int blue  = (int)_data["d"]["p"]["data"]["value"]["b"];
+
+                double red_double   = color_remap_double(red,   COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
+                double green_double = color_remap_double(green, COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
+                double blue_double  = color_remap_double(blue,  COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
+                double hue_double, saturation_double, value_double;
+                RGBtoHSV(red_double, green_double, blue_double, &hue_double, &saturation_double, &value_double);
+
+                muzzley_handle_lighting_write_HSVT_request(lampManager, component, (int)(hue_double), (int)(saturation_double*100), (int)(value_double*100), COLOR_TEMPERATURE_DEFAULT_DEC);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_COLOR_HSV)){
+                int hue        = (int)_data["d"]["p"]["data"]["value"]["h"];
+                int saturation = (int)_data["d"]["p"]["data"]["value"]["s"];
+                int value      = (int)_data["d"]["p"]["data"]["value"]["v"];
+                muzzley_handle_lighting_write_HSVT_request(lampManager, component, hue, saturation, value, COLOR_TEMPERATURE_DEFAULT_DEC);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_COLOR_HSVT)){
+                int hue        = (int)_data["d"]["p"]["data"]["value"]["h"];
+                int saturation = (int)_data["d"]["p"]["data"]["value"]["s"];
+                int value      = (int)_data["d"]["p"]["data"]["value"]["v"];
+                int colortemp  = (int)_data["d"]["p"]["data"]["value"]["t"];
+                muzzley_handle_lighting_write_HSVT_request(lampManager, component, hue, saturation, value, colortemp);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_COLOR_NAME)){
+                string colorname = (string)_data["d"]["p"]["data"]["value"];
+                cout << "Requested color name: " << colorname << endl << flush;
+                muzzley_handle_lighting_write_colorname_request(lampManager, component, colorname);
+                return true;
+            } else if(!strcmp(property.c_str(), PROPERTY_REACHABLE)){
+                cout << "Received a write request for the property reachable" << endl << flush;
+                return false;
+            } else {
+                cout << "Received a request with a unknown property type" << endl << flush;
+                return false;
+            }
+        }
+        return true;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
         return false;
     }
 
-    muzzley_query_unknown_lampnames(&lampManager);
-    print_request_vector();
 
-    if (io=="r"){
-        muzzley_handle_lighting_read_request(lampManager, component, property, cid, t);
-    }
-    if (io=="w"){
-        if(property==PROPERTY_STATUS){
-            bool bool_status = (bool)_data["d"]["p"]["data"]["value"];
-            muzzley_handle_lighting_write_status_request(lampManager, component, bool_status);
-        }
-        if(property==PROPERTY_BRIGHTNESS){
-            double brightness = (double)_data["d"]["p"]["data"]["value"];
-            muzzley_handle_lighting_write_brightness_request(lampManager, component, brightness);   
-        }
-        if(property==PROPERTY_COLOR_RGB){
-            int red   = (int)_data["d"]["p"]["data"]["value"]["r"];
-            int green = (int)_data["d"]["p"]["data"]["value"]["g"];
-            int blue  = (int)_data["d"]["p"]["data"]["value"]["b"];
 
-            double red_double   = color_remap_double(red,   COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
-            double green_double = color_remap_double(green, COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
-            double blue_double  = color_remap_double(blue,  COLOR_MIN, COLOR_RGB_MAX, COLOR_MIN, COLOR_DOUBLE_MAX);
-            double hue_double, saturation_double, value_double;
-            RGBtoHSV(red_double, green_double, blue_double, &hue_double, &saturation_double, &value_double);
-
-            muzzley_handle_lighting_write_HSVT_request(lampManager, component, (int)(hue_double), (int)(saturation_double*100), (int)(value_double*100), COLOR_TEMPERATURE_DEFAULT_DEC);                                
-        }
-        if(property==PROPERTY_COLOR_HSV){
-            int hue        = (int)_data["d"]["p"]["data"]["value"]["h"];
-            int saturation = (int)_data["d"]["p"]["data"]["value"]["s"];
-            int value      = (int)_data["d"]["p"]["data"]["value"]["v"];
-            muzzley_handle_lighting_write_HSVT_request(lampManager, component, hue, saturation, value, COLOR_TEMPERATURE_DEFAULT_DEC);
-        }
-        if(property==PROPERTY_COLOR_HSVT){
-            int hue        = (int)_data["d"]["p"]["data"]["value"]["h"];
-            int saturation = (int)_data["d"]["p"]["data"]["value"]["s"];
-            int value      = (int)_data["d"]["p"]["data"]["value"]["v"];
-            int colortemp  = (int)_data["d"]["p"]["data"]["value"]["t"];
-            muzzley_handle_lighting_write_HSVT_request(lampManager, component, hue, saturation, value, colortemp);
-        }
-        if(property==PROPERTY_COLOR_NAME){
-            string colorname = (string)_data["d"]["p"]["data"]["value"];
-            cout << "Requested color name: " << colorname << endl << flush;
-            muzzley_handle_lighting_write_colorname_request(lampManager, component, colorname);  
-        }
-    }
-    return true;
 }
+
 
 
 
@@ -2540,7 +2869,6 @@ void muzzley_handle_plug_read_voltage_request(string component, string cid, int 
     }else{
         const char* voltage = voltage_property->getPropertyValue().charValue;
         muzzley_publish_plug_string(component, PROPERTY_VOLTAGE, voltage);
-        muzzley_clean_request_vector();
     }
 }
 
@@ -2559,7 +2887,6 @@ void muzzley_handle_plug_read_current_request(string component, string cid, int 
     }else{
         const char* current = current_property->getPropertyValue().charValue;
         muzzley_publish_plug_string(component, PROPERTY_CURRENT, current);
-        muzzley_clean_request_vector();
     }
 }
 
@@ -2579,7 +2906,6 @@ void muzzley_handle_plug_read_frequency_request(string component, string cid, in
     }else{
         const char* frequency = frequency_property->getPropertyValue().charValue;
         muzzley_publish_plug_string(component, property, frequency);
-        muzzley_clean_request_vector();
     }
 }
 
@@ -2598,7 +2924,6 @@ void muzzley_handle_plug_read_power_request(string component, string cid, int t)
     }else{
         const char* energy = power_property->getPropertyValue().charValue;
         muzzley_publish_plug_string(component, PROPERTY_POWER, energy);
-        muzzley_clean_request_vector();
     }
 }
 
@@ -2617,7 +2942,6 @@ void muzzley_handle_plug_read_energy_request(string component, string cid, int t
     }else{
         const char* energy = energy_property->getPropertyValue().charValue;
         muzzley_publish_plug_string(component, PROPERTY_ENERGY, energy);
-        muzzley_clean_request_vector();
     }
 }
 
@@ -2725,7 +3049,6 @@ void muzzley_update_plug_properties(string component){
         const char* energy = energy_property->getPropertyValue().charValue;
         muzzley_publish_plug_string(component, PROPERTY_ENERGY, energy);
     }
-    muzzley_clean_request_vector();
 }
 
 bool muzzley_handle_plug_request(muzzley::JSONObjT _data){
@@ -2791,6 +3114,7 @@ bool muzzley_handle_plug_request(muzzley::JSONObjT _data){
 }
 
 
+
 //LightingSDK
 class ControllerClientCallbackHandler : public ControllerClientCallback {
   public:
@@ -2812,6 +3136,9 @@ class ControllerClientCallbackHandler : public ControllerClientCallback {
         LSFString name = controllerServiceName;
         muzzley_controllerservice_id="";
         muzzley_controllerservice_name="";
+
+
+
         muzzley_controllerservice_connected=false;
         printf("\n%s:\ncontrollerServiceDeviceID: %s\ncontrollerServiceName: %s\n\n", __func__, uniqueId.data(), name.data());
         lsf_controller_service_print();
@@ -2834,7 +3161,7 @@ class ControllerClientCallbackHandler : public ControllerClientCallback {
             printf("\n%s", ControllerClientErrorText(*it));
         }
         printf("\n");
-        lsf_controller_service_print();
+        muzzley_controllerclient_connected = false;
     }
     
 
@@ -2870,18 +3197,20 @@ public:
     void GetAllLampIDsReplyCB(const LSFResponseCode& responseCode, const LSFStringList& lampIDs) {
         printf("\n%s():\nresponseCode: %s\nlistsize: %lu", __func__, LSFResponseCodeText(responseCode), lampIDs.size());
         if (responseCode == LSF_OK) {
-            //muzzley_lamplist.clear();
             LSFStringList::const_iterator it = lampIDs.begin();
             uint8_t count = 1;
+
             for (; it != lampIDs.end(); ++it) {
                 printf("\n(%d)%s", count, (*it).data());
                 count++;
-                muzzley_lamplist[(*it).data()] = muzzley_lamplist_get_lampname((*it).data());
             }
+
             printf("\n\n");
             lampList.clear();
             lampList = lampIDs;
-            muzzley_replace_lighting_components();
+
+            if(!muzzley_lamplist_replace_lamplist(lampIDs))
+                muzzley_replace_lighting_components();
         }
     }
 
@@ -2895,8 +3224,8 @@ public:
                     if(local_it->first == lampID.data() ){
                         local_it->second = lampName.data();
                         cout << endl << "Lamp ID: " << lampID << endl << "Name: " << lampName << " was updated in lamplist" << endl << endl << flush; 
-                      }
-                }      
+                    }
+                }
             }
             muzzley_add_lighting_component(lampID, lampName);
         }
@@ -2914,6 +3243,9 @@ public:
         if (responseCode == LSF_OK) {
             printf("\nstate: %s\n", lampState.c_str());
             muzzley_parseLampState(lampID, lampState, this->_client);
+        } else {
+            cout << endl << "LSF Timeout!" << endl << flush;
+            muzzley_handle_lighting_request_unreachable(lampID, this->_client);
         }
     }
 
@@ -2943,6 +3275,7 @@ public:
         uint8_t count = 1;
         for (; it != lampIDs.end(); ++it) {
             printf("\n(%d)%s\n", count, (*it).data());
+            muzzley_publish_lampReachable((*it).data(), false, this->_client);
             muzzley_lamplist_del_lamp((*it).data());
             count++;
         }
@@ -3484,8 +3817,13 @@ void muzzley_info_print(){
 
 void alljoyn_status_info(){
     while(true){
+        //Update XML Data
+        gupnp_generate_lighting_XML();
+        gupnp_generate_plugs_XML();
+        //Print Info
         muzzley_info_print();
         upnp_info_print();
+        lsf_controller_client_print();
         lsf_controller_service_print();
         muzzley_lamplist_print();
         muzzley_plug_vector_print();
@@ -3496,6 +3834,19 @@ void alljoyn_status_info(){
 void muzzley_read_request_cleaner(){
     while(true){
         muzzley_clean_request_vector();
+    }
+}
+
+void muzzley_update_lamplist(LampManager* lampManager){
+    while(true){
+        //Update lampList
+        int semaphore = semaphore_start();
+        semaphore_lock(semaphore);
+        int status = lampManager->GetAllLampIDs();
+        semaphore_unlock(semaphore);
+        usleep(LSF_LAMPMANAGER_SLEEP);
+        muzzley_query_unknown_lampnames(lampManager);
+        sleep(MUZZLEY_DEFAULT_STATUS_INTERVAL);
     }
 }
 
@@ -3532,7 +3883,7 @@ int main(int argc, char* argv[]){
     muzzley_lighting_upnp_friendlyname=MUZZLEY_DEFAULT_LIGHTING_FRIENDLYNAME;
     muzzley_lighting_upnp_udn=MUZZLEY_DEFAULT_LIGHTING_UDN;
     muzzley_lighting_upnp_serialnumber=MUZZLEY_DEFAULT_LIGHTING_SERIALNUMBER;
-    muzzley_lighting_upnp_interface = MUZZLEY_DEFAULT_NETWORK_INTERFACE;
+    muzzley_lighting_upnp_interface=MUZZLEY_DEFAULT_NETWORK_INTERFACE;
     muzzley_lighting_upnp_port = MUZZLEY_DEFAULT_NETWORK_LIGHTING_PORT;
 
     muzzley_plugs_profileid=MUZZLEY_DEFAULT_PLUGS_PROFILEID;
@@ -3540,8 +3891,8 @@ int main(int argc, char* argv[]){
     muzzley_plugs_upnp_friendlyname=MUZZLEY_DEFAULT_PLUGS_FRIENDLYNAME;
     muzzley_plugs_upnp_udn=MUZZLEY_DEFAULT_PLUGS_UDN;
     muzzley_plugs_upnp_serialnumber=MUZZLEY_DEFAULT_PLUGS_SERIALNUMBER;
-    muzzley_plugs_upnp_interface = MUZZLEY_DEFAULT_NETWORK_INTERFACE;
-    muzzley_plugs_upnp_port = MUZZLEY_DEFAULT_NETWORK_PLUGS_PORT;
+    muzzley_plugs_upnp_interface=MUZZLEY_DEFAULT_NETWORK_INTERFACE;
+    muzzley_plugs_upnp_port=MUZZLEY_DEFAULT_NETWORK_PLUGS_PORT;
 
     muzzley_manufacturer=MUZZLEY_DEFAULT_MANUFACTURER;
     muzzley_manufacturer_url=MUZZLEY_DEFAULT_MANUFACTURER_URL;
@@ -3555,6 +3906,7 @@ int main(int argc, char* argv[]){
     //Get MACAdress info from the current network interface in use
     muzzley_lighting_macAddress = get_iface_macAdress(muzzley_lighting_upnp_interface);
        muzzley_plugs_macAddress = get_iface_macAdress(muzzley_plugs_upnp_interface);
+
 
     //Parse cmd line custom Muzzley tokens
     if(argc>1){
@@ -3635,6 +3987,7 @@ int main(int argc, char* argv[]){
     
     //Initialize alljoyn bus ("ClientTest")
     bus = new BusAttachment("MuzzleyConnector", true);
+   
     QStatus bus_status = bus->Start();
     if (ER_OK != bus_status) {
         cout << "Error starting bus: " << QCC_StatusText(bus_status) << endl;
@@ -3648,20 +4001,25 @@ int main(int argc, char* argv[]){
         cleanup();
         return 1;
     }
-  
+    bus->EnableConcurrentCallbacks();
+    
     ControllerClientCallbackHandler controllerClientCBHandler;
     ControllerServiceManagerCallbackHandler controllerServiceManagerCBHandler;
     LampManagerCallbackHandler lampManagerCBHandler(&_muzzley_lighting_client);
     ControllerClient client(*bus, controllerClientCBHandler);
-    ControllerServiceManager controllerServiceManager(client, controllerServiceManagerCBHandler);
+    ControllerServiceManager controllerServiceManager(client, controllerServiceManagerCBHandler); 
     LampManager lampManager(client, lampManagerCBHandler);
-   
+    
+
     ControllerClientStatus status = client.Start();
-    status = CONTROLLER_CLIENT_OK;
- 
-    printf("\nLighting Controller Client Start() returned %s\n", ControllerClientStatusText(status));
-    printf("\nLighting Controller Client Version = %d\n", client.GetVersion());
-  
+    if(status==CONTROLLER_CLIENT_OK){
+        muzzley_controllerclient_connected = true;
+        muzzley_controllerclient_status = ControllerClientStatusText(status);
+        muzzley_controllerclient_version = client.GetVersion();
+        cout << "Lighting Controller Client Start() returned: " << muzzley_controllerclient_status << endl << flush;
+        cout << "Lighting Controller Client Version: " << muzzley_controllerclient_version << endl << flush;
+    }    
+
     /*
     //Initialize notification consumer
     notificationService = NotificationService::getInstance();
@@ -3720,7 +4078,7 @@ int main(int argc, char* argv[]){
 
             try{
                 muzzley::JSONObjT m = *_data;
-                muzzley_handle_lighting_request(lampManager, m);
+                muzzley_handle_lighting_request(&lampManager, m, &_muzzley_lighting_client);
             }catch(exception& e){
                 cout << "Exception: " << e.what() << endl << flush;
             }
@@ -3807,14 +4165,14 @@ int main(int argc, char* argv[]){
         std::thread alljoyn_status_thread(alljoyn_status_info);
         alljoyn_status_thread.detach();
 
-        //Cleans all timmed out muzzley read requstes
+        //Cleans all timmed out muzzley read requsts
         std::thread muzzley_read_request_cleaner_thread(muzzley_read_request_cleaner);
         muzzley_read_request_cleaner_thread.detach();
 
-        //Get all Available LampsIDs for upnp server
-        status = lampManager.GetAllLampIDs();
-        muzzley_query_unknown_lampnames(&lampManager);
-    
+        //Update Alljoyn lamp list
+        std::thread muzzley_update_lamplist_thread(muzzley_update_lamplist, &lampManager);
+        muzzley_update_lamplist_thread.detach();
+
         while(true){}
     
         cleanup();
