@@ -320,15 +320,6 @@ void alljoyn_execute_action(Action* action){
     std::cout << "Action: " << action->getWidgetName().c_str() << (status == ER_OK ? " executed successfullly" : " failed") << std::endl;
 }
 
-//Color convert Utils
-long long color_remap_long_long(long long x, long long in_min, long long in_max, long long out_min, long long out_max){
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-double color_remap_double(double x, double in_min, double in_max, double out_min, double out_max){
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
 //Semaphore methods
 void semaphore_lock(int& semaphore) {
     // Tests for '0' on the semaphore and increments '1' when '0' is observed
@@ -408,6 +399,15 @@ void muzzley_write_plugs_deviceKey_file(string deviceKey){
     myfile.open (MUZZLEY_PLUGS_DEVICEKEY_FILENAME);    
     myfile << deviceKey;
     myfile.close();
+}
+
+//Color convert Utils
+long long color_remap_long_long(long long x, long long in_min, long long in_max, long long out_min, long long out_max){
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+double color_remap_double(double x, double in_min, double in_max, double out_min, double out_max){
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
 void RGBtoHSV( double r, double g, double b, double *h, double *s, double *v )
@@ -1845,21 +1845,20 @@ bool muzzley_remove_plugs_component(string plug_id, string plug_name){
     return true;
 }
 
-
-bool muzzley_publish_lampReachable(LSFString lampID, bool reachable, muzzley::Client* _muzzley_lighting_client){
+bool muzzley_publish(string workspace, string profileId, string channelId, string componentId, string property, string data, muzzley::Client* _client){
     try{
         
         int semaphore = semaphore_start();
 
         muzzley::Subscription _s1;
-        _s1.setNamespace(MUZZLEY_WORKSPACE);
-        _s1.setProfile(muzzley_lighting_profileid);
-        _s1.setChannel(muzzley_lighting_deviceKey);
-        _s1.setComponent(lampID);
-        _s1.setProperty(PROPERTY_REACHABLE);
+        _s1.setNamespace(workspace);
+        _s1.setProfile(profileId);
+        _s1.setChannel(channelId);
+        _s1.setComponent(componentId);
+        _s1.setProperty(property);
 
         muzzley::Message _m1;
-        int pos = get_request_vector_pos(lampID, PROPERTY_REACHABLE);
+        int pos = get_request_vector_pos(componentId, property);
 
         
         while(pos!=-1){
@@ -1867,25 +1866,23 @@ bool muzzley_publish_lampReachable(LSFString lampID, bool reachable, muzzley::Cl
             _m1.setCorrelationID(get_request_vector_CID(pos));
             _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
             _m1.setData(JSON(
-               "value" <<  reachable <<
-               "profile" << muzzley_lighting_profileid <<
-               "channel" << muzzley_lighting_deviceKey <<
-               "component" << lampID <<
-               "property" << PROPERTY_REACHABLE <<
+               "value" <<  data <<
+               "profile" << profileId <<
+               "channel" << channelId <<
+               "component" << componentId <<
+               "property" << property <<
                "data" << JSON(
-                   "value" <<  reachable
+                   "value" <<  data
                    )
             ));
 
             //cout << _s1 << endl << flush;
             //cout << _m1 << endl << flush;
             semaphore_lock(semaphore);
-            _muzzley_lighting_client->reply(_m1, _m1);
+            _client->reply(_m1, _m1);
             semaphore_unlock(semaphore);
             delete_request_vector_pos(pos);
-            cout << "Replyed bulb reachable status!" << endl << flush;
-
-            pos = get_request_vector_pos(lampID, PROPERTY_REACHABLE);
+            pos = get_request_vector_pos(componentId, property);
             if(pos==-1)
                 return true;
         }
@@ -1893,16 +1890,15 @@ bool muzzley_publish_lampReachable(LSFString lampID, bool reachable, muzzley::Cl
         _m1.setData(JSON(
             "io" << "i" <<
             "data" << JSON(
-               "value" <<  reachable
+               "value" <<  data
             )
         ));
 
         //cout << _s1 << endl << flush;
         //cout << _m1 << endl << flush;
         semaphore_lock(semaphore);
-        _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
+        _client->trigger(muzzley::Publish, _s1, _m1);
         semaphore_unlock(semaphore);
-        cout << "Published bulb reachable status!" << endl << flush;
         return true;
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
@@ -1911,63 +1907,29 @@ bool muzzley_publish_lampReachable(LSFString lampID, bool reachable, muzzley::Cl
     
 }
 
+
+bool muzzley_publish_lampReachable(LSFString lampID, bool reachable, muzzley::Client* _muzzley_lighting_client){
+    try{ 
+        string data;
+        if(reachable)
+            data="true";
+        else
+            data="false";
+        return muzzley_publish(MUZZLEY_WORKSPACE, muzzley_lighting_profileid, muzzley_lighting_deviceKey, lampID, PROPERTY_REACHABLE, data, _muzzley_lighting_client);
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        return false;
+    }
+}
+
 bool muzzley_publish_lampState(LSFString lampID, bool onoff, muzzley::Client* _muzzley_lighting_client){
     try{
-        
-        int semaphore = semaphore_start();
-
-        muzzley::Subscription _s1;
-        _s1.setNamespace(MUZZLEY_WORKSPACE);
-        _s1.setProfile(muzzley_lighting_profileid);
-        _s1.setChannel(muzzley_lighting_deviceKey);
-        _s1.setComponent(lampID);
-        _s1.setProperty(PROPERTY_STATUS);
-
-        muzzley::Message _m1;
-        int pos = get_request_vector_pos(lampID, PROPERTY_STATUS);
-        
-        while(pos!=-1){
-            _m1.setStatus(true);
-            _m1.setCorrelationID(get_request_vector_CID(pos));
-            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-            _m1.setData(JSON(
-               "value" <<  onoff <<
-               "profile" << muzzley_lighting_profileid <<
-               "channel" << muzzley_lighting_deviceKey <<
-               "component" << lampID <<
-               "property" << PROPERTY_STATUS <<
-               "data" << JSON(
-                   "value" <<  onoff
-                   )
-            ));
-
-            //cout << _s1 << endl << flush;
-            //cout << _m1 << endl << flush;
-            semaphore_lock(semaphore);
-            _muzzley_lighting_client->reply(_m1, _m1);
-            semaphore_unlock(semaphore);
-            delete_request_vector_pos(pos);
-            cout << "Replyed bulb status!" << endl << flush;
-
-            pos = get_request_vector_pos(lampID, PROPERTY_STATUS);
-            if(pos==-1)
-                return true;
-        }
-            
-        _m1.setData(JSON(
-            "io" << "i" <<
-            "data" << JSON(
-               "value" <<  onoff
-            )
-        ));
-
-        //cout << _s1 << endl << flush;
-        //cout << _m1 << endl << flush;
-        semaphore_lock(semaphore);
-        _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
-        semaphore_unlock(semaphore);
-         cout << "Published bulb status!" << endl << flush;
-        return true;
+        string data;
+        if(onoff)
+            data="true";
+        else
+            data="false";
+        return muzzley_publish(MUZZLEY_WORKSPACE, muzzley_lighting_profileid, muzzley_lighting_deviceKey, lampID, PROPERTY_STATUS, data, _muzzley_lighting_client);
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
@@ -1977,61 +1939,10 @@ bool muzzley_publish_lampState(LSFString lampID, bool onoff, muzzley::Client* _m
 
 bool muzzley_publish_brightness(LSFString lampID, double brightness, muzzley::Client* _muzzley_lighting_client){
     try{
-
-        int semaphore = semaphore_start();
-
-        muzzley::Subscription _s1;
-        _s1.setNamespace(MUZZLEY_WORKSPACE);
-        _s1.setProfile(muzzley_lighting_profileid);
-        _s1.setChannel(muzzley_lighting_deviceKey);
-        _s1.setComponent(lampID);
-        _s1.setProperty(PROPERTY_BRIGHTNESS);
-
-        muzzley::Message _m1;
-
-        int pos = get_request_vector_pos(lampID, PROPERTY_BRIGHTNESS);
-        while(pos!=-1){
-            _m1.setStatus(true);
-            _m1.setCorrelationID(get_request_vector_CID(pos));
-            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-            _m1.setData(JSON(
-                "value" <<  brightness <<
-                "profile" << muzzley_lighting_profileid <<
-                "channel" << muzzley_lighting_deviceKey <<
-                "component" << lampID <<
-                "property" << PROPERTY_BRIGHTNESS <<
-                "data" << JSON(
-                    "value" <<  brightness
-                    )
-            ));
-
-            //cout << _s1 << endl << flush;
-            //cout << _m1 << endl << flush;
-            semaphore_lock(semaphore);
-            _muzzley_lighting_client->reply(_m1, _m1);
-            semaphore_unlock(semaphore);
-            delete_request_vector_pos(pos);
-            cout << "Replyed bulb brightness!" << endl << flush;
-
-            pos = get_request_vector_pos(lampID, PROPERTY_BRIGHTNESS);
-            if(pos==-1)
-                return true;
-        }
-         
-       _m1.setData(JSON(
-            "io" << "i" <<
-            "data" << JSON(
-                "value" <<  brightness
-            )
-        ));
-        
-        //cout << _s1 << endl << flush;
-        //cout << _m1 << endl << flush;
-        semaphore_lock(semaphore);
-        _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
-        semaphore_unlock(semaphore);
-        cout << "Published bulb brightness!" << endl << flush;
-        return true;
+        ostringstream strs;
+        strs << brightness;
+        string data = strs.str();
+        return muzzley_publish(MUZZLEY_WORKSPACE, muzzley_lighting_profileid, muzzley_lighting_deviceKey, lampID, PROPERTY_BRIGHTNESS, data, _muzzley_lighting_client);
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
@@ -2042,74 +1953,10 @@ bool muzzley_publish_brightness(LSFString lampID, double brightness, muzzley::Cl
 
 bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blue, muzzley::Client* _muzzley_lighting_client){
     try{
-
-        int semaphore = semaphore_start();
-
-        muzzley::Subscription _s1;
-        _s1.setNamespace(MUZZLEY_WORKSPACE);
-        _s1.setProfile(muzzley_lighting_profileid);
-        _s1.setChannel(muzzley_lighting_deviceKey);
-        _s1.setComponent(lampID);
-        _s1.setProperty(PROPERTY_COLOR_RGB);
-
-
-        muzzley::Message _m1;
-
-        int pos = get_request_vector_pos(lampID, PROPERTY_COLOR_RGB);
-        while(pos!=-1){
-            _m1.setStatus(true);
-            _m1.setCorrelationID(get_request_vector_CID(pos));
-            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-            _m1.setData(JSON(
-                "value" << JSON(
-                    "r" << red <<
-                    "g" << green <<
-                    "b" << blue
-                      ) <<
-                "profile" << muzzley_lighting_profileid <<
-                "channel" << muzzley_lighting_deviceKey <<
-                "component" << lampID <<
-                "property" << PROPERTY_COLOR_RGB <<
-                "data" << JSON(
-                    "value" <<  JSON(
-                        "r" << red <<
-                        "g" << green <<
-                        "b" << blue
-                          )
-                    ) 
-            ));
-
-            //cout << _s1 << endl << flush;
-            //cout << _m1 << endl << flush;
-            semaphore_lock(semaphore);
-            _muzzley_lighting_client->reply(_m1, _m1);
-            semaphore_unlock(semaphore);
-            delete_request_vector_pos(pos);
-            cout << "Replyed bulb color!" << endl << flush;
-
-            pos = get_request_vector_pos(lampID, PROPERTY_COLOR_RGB);
-            if(pos==-1)
-                return true;
-        }
-      
-        _m1.setData(JSON(
-            "io" << "i" <<
-            "data" << JSON(
-                "value" << JSON(
-                "r" << red <<
-                "g" << green <<
-                "b" << blue
-                )    
-            )
-        ));
-
-        //cout << _s1 << endl << flush;
-        //cout << _m1 << endl << flush;
-        semaphore_lock(semaphore);
-        _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
-        semaphore_unlock(semaphore);
-        cout << "Published bulb color!" << endl << flush;
-        return true;
+        muzzley::JSONObj rgb = JSON("r" << red << "g" << green << "b" << blue);
+        string data;
+        rgb->stringify(data);
+        return muzzley_publish(MUZZLEY_WORKSPACE, muzzley_lighting_profileid, muzzley_lighting_deviceKey, lampID, PROPERTY_COLOR_RGB, data, _muzzley_lighting_client);
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
@@ -2118,74 +1965,10 @@ bool muzzley_publish_lampColor_rgb(LSFString lampID, int red, int green, int blu
 
 bool muzzley_publish_lampColor_hsv(LSFString lampID, int hue, int saturation, int value, muzzley::Client* _muzzley_lighting_client){
     try{
-
-        int semaphore = semaphore_start();
-
-        muzzley::Subscription _s1;
-        _s1.setNamespace(MUZZLEY_WORKSPACE);
-        _s1.setProfile(muzzley_lighting_profileid);
-        _s1.setChannel(muzzley_lighting_deviceKey);
-        _s1.setComponent(lampID);
-        _s1.setProperty(PROPERTY_COLOR_HSV);
-
-
-        muzzley::Message _m1;
-
-        int pos = get_request_vector_pos(lampID, PROPERTY_COLOR_HSV);
-        while(pos!=-1){
-            _m1.setStatus(true);
-            _m1.setCorrelationID(get_request_vector_CID(pos));
-            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-            _m1.setData(JSON(
-                "value" << JSON(
-                    "h" << hue <<
-                    "s" << saturation <<
-                    "v" << value
-                ) <<
-                "profile" << muzzley_lighting_profileid <<
-                "channel" << muzzley_lighting_deviceKey <<
-                "component" << lampID <<
-                "property" << PROPERTY_COLOR_HSV <<
-                "data" << JSON(
-                    "value" <<  JSON(
-                        "h" << hue <<
-                        "s" << saturation <<
-                        "v" << value
-                    )
-                ) 
-            ));
-
-            //cout << _s1 << endl << flush;
-            //cout << _m1 << endl << flush;
-            semaphore_lock(semaphore);
-            _muzzley_lighting_client->reply(_m1, _m1);
-            semaphore_unlock(semaphore);
-            delete_request_vector_pos(pos);
-            cout << "Replyed bulb color hsv!" << endl << flush;
-
-            pos = get_request_vector_pos(lampID, PROPERTY_COLOR_HSV);
-            if(pos==-1)
-                return true;
-        }
-      
-        _m1.setData(JSON(
-            "io" << "i" <<
-            "data" << JSON(
-                "value" << JSON(
-                    "h" << hue <<
-                    "s" << saturation <<
-                    "v" << value
-                )    
-            )
-        ));
-
-        //cout << _s1 << endl << flush;
-        //cout << _m1 << endl << flush;
-        semaphore_lock(semaphore);
-        _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
-        semaphore_unlock(semaphore);
-        cout << "Published bulb color hsv!" << endl << flush;
-        return true;
+        muzzley::JSONObj hsv = JSON("h" << hue << "s" << saturation << "v" << value);
+        string data;
+        hsv->stringify(data);
+        return muzzley_publish(MUZZLEY_WORKSPACE, muzzley_lighting_profileid, muzzley_lighting_deviceKey, lampID, PROPERTY_COLOR_HSV, data, _muzzley_lighting_client);
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
@@ -2194,77 +1977,10 @@ bool muzzley_publish_lampColor_hsv(LSFString lampID, int hue, int saturation, in
 
 bool muzzley_publish_lampColor_hsvt(LSFString lampID, int hue, int saturation, int value, int temperature, muzzley::Client* _muzzley_lighting_client){
     try{
-
-        int semaphore = semaphore_start();
-
-        muzzley::Subscription _s1;
-        _s1.setNamespace(MUZZLEY_WORKSPACE);
-        _s1.setProfile(muzzley_lighting_profileid);
-        _s1.setChannel(muzzley_lighting_deviceKey);
-        _s1.setComponent(lampID);
-        _s1.setProperty(PROPERTY_COLOR_HSVT);
-
-
-        muzzley::Message _m1;
-
-        int pos = get_request_vector_pos(lampID, PROPERTY_COLOR_HSVT);
-        while(pos!=-1){
-            _m1.setStatus(true);
-            _m1.setCorrelationID(get_request_vector_CID(pos));
-            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-            _m1.setData(JSON(
-                "value" << JSON(
-                    "h" << hue <<
-                    "s" << saturation <<
-                    "v" << value <<
-                    "t" << temperature
-                ) <<
-                "profile" << muzzley_lighting_profileid <<
-                "channel" << muzzley_lighting_deviceKey <<
-                "component" << lampID <<
-                "property" << PROPERTY_COLOR_HSVT <<
-                "data" << JSON(
-                    "value" <<  JSON(
-                        "h" << hue <<
-                        "s" << saturation <<
-                        "v" << value <<
-                        "t" << temperature
-                    )
-                ) 
-            ));
-
-            //cout << _s1 << endl << flush;
-            //cout << _m1 << endl << flush;
-            semaphore_lock(semaphore);
-            _muzzley_lighting_client->reply(_m1, _m1);
-            semaphore_unlock(semaphore);
-            delete_request_vector_pos(pos);
-            cout << "Replyed bulb color hsvt!" << endl << flush;
-
-            pos = get_request_vector_pos(lampID, PROPERTY_COLOR_HSVT);
-            if(pos==-1)
-                return true;
-        }
-      
-        _m1.setData(JSON(
-            "io" << "i" <<
-            "data" << JSON(
-                "value" << JSON(
-                    "h" << hue <<
-                    "s" << saturation <<
-                    "v" << value <<
-                    "t" << temperature
-                )    
-            )
-        ));
-
-        //cout << _s1 << endl << flush;
-        //cout << _m1 << endl << flush;
-        semaphore_lock(semaphore);
-        _muzzley_lighting_client->trigger(muzzley::Publish, _s1, _m1);
-        semaphore_unlock(semaphore);
-        cout << "Published bulb color hsvt!" << endl << flush;
-        return true;
+        muzzley::JSONObj hsvt = JSON("h" << hue << "s" << saturation << "v" << value << "t" << temperature);
+        string data;
+        hsvt->stringify(data);
+        return muzzley_publish(MUZZLEY_WORKSPACE, muzzley_lighting_profileid, muzzley_lighting_deviceKey, lampID, PROPERTY_COLOR_HSVT, data, _muzzley_lighting_client);
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
@@ -2698,67 +2414,17 @@ bool muzzley_handle_lighting_request(LampManager* lampManager, muzzley::JSONObjT
         cout << "Exception: " << e.what() << endl << flush;
         return false;
     }
-
-
-
 }
-
-
 
 
 bool muzzley_publish_plug_state(string plugID, bool onoff){
     try{
-
-        int semaphore = semaphore_start();
-
-        muzzley::Subscription _s1;
-        _s1.setNamespace(MUZZLEY_WORKSPACE);
-        _s1.setProfile(muzzley_plugs_profileid);
-        _s1.setChannel(muzzley_plugs_deviceKey);
-        _s1.setComponent(plugID);
-        _s1.setProperty(PROPERTY_STATUS);
-
-        muzzley::Message _m1;
-
-        int pos = get_request_vector_pos(plugID, PROPERTY_STATUS);
-        if(pos!=-1){
-            _m1.setStatus(true);
-            _m1.setCorrelationID(get_request_vector_CID(pos));
-            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-            _m1.setData(JSON(
-               "value" <<  onoff <<
-               "profile" << muzzley_plugs_profileid <<
-               "channel" << muzzley_plugs_deviceKey <<
-               "component" << plugID <<
-               "property" << PROPERTY_STATUS <<
-               "data" << JSON(
-                   "value" <<  onoff
-                   )
-            ));
-
-            //cout << _s1 << endl << flush;
-            //cout << _m1 << endl << flush;
-            semaphore_lock(semaphore);
-            _muzzley_plugs_client.reply(_m1, _m1);
-            semaphore_unlock(semaphore);
-            delete_request_vector_pos(pos);
-            cout << "Replyed plug status!" << endl << flush;
-            return true;
-        }
-
-        _m1.setData(JSON(
-            "io" << "i" <<
-            "data" << JSON(
-               "value" <<  onoff
-            )
-        ));
-
-        //cout << _s1 << endl << flush;
-        //cout << _m1 << endl << flush;
-        semaphore_lock(semaphore);
-        _muzzley_plugs_client.trigger(muzzley::Publish, _s1, _m1);
-        semaphore_unlock(semaphore);
-        return true;
+        string data;
+        if(onoff)
+            data="true";
+        else
+            data="false";
+        return muzzley_publish(MUZZLEY_WORKSPACE, muzzley_plugs_profileid, muzzley_plugs_deviceKey, plugID, PROPERTY_STATUS, data, &_muzzley_plugs_client);
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
@@ -2767,57 +2433,7 @@ bool muzzley_publish_plug_state(string plugID, bool onoff){
 
 bool muzzley_publish_plug_string(string plugID, string property, string value){
     try{
-        
-        int semaphore = semaphore_start();
-
-        muzzley::Subscription _s1;
-        _s1.setNamespace(MUZZLEY_WORKSPACE);
-        _s1.setProfile(muzzley_plugs_profileid);
-        _s1.setChannel(muzzley_plugs_deviceKey);
-        _s1.setComponent(plugID);
-        _s1.setProperty(property);
-
-        muzzley::Message _m1;
-
-        int pos = get_request_vector_pos(plugID, property);
-        if(pos!=-1){
-            _m1.setStatus(true);
-            _m1.setCorrelationID(get_request_vector_CID(pos));
-            _m1.setMessageType((muzzley::MessageType)get_request_vector_t(pos));
-            _m1.setData(JSON(
-               "value" <<  value <<
-               "profile" << muzzley_plugs_profileid <<
-               "channel" << muzzley_plugs_deviceKey <<
-               "component" << plugID <<
-               "property" << property <<
-               "data" << JSON(
-                   "value" <<  value
-                   )
-            ));
-
-            //cout << _s1 << endl << flush;
-            //cout << _m1 << endl << flush;
-            semaphore_lock(semaphore);
-            _muzzley_plugs_client.reply(_m1, _m1);
-            semaphore_unlock(semaphore);
-            delete_request_vector_pos(pos);
-            cout << "Replyed plug " << property << " string!" << endl << flush;
-            return true;
-        }
-
-        _m1.setData(JSON(
-            "io" << "i" <<
-            "data" << JSON(
-               "value" <<  value
-            )
-        ));
-
-        //cout << _s1 << endl << flush;
-        //cout << _m1 << endl << flush;
-        semaphore_lock(semaphore);
-        _muzzley_plugs_client.trigger(muzzley::Publish, _s1, _m1);
-        semaphore_unlock(semaphore);
-        return true;
+        return muzzley_publish(MUZZLEY_WORKSPACE, muzzley_plugs_profileid, muzzley_plugs_deviceKey, plugID, property, value, &_muzzley_plugs_client);
     }catch(exception& e){
         cout << "Exception: " << e.what() << endl << flush;
         return false;
