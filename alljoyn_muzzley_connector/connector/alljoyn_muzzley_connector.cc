@@ -59,7 +59,6 @@
 #include <cmath>
 #include <math.h>
 
-
 //Timer
 #include <iostream>
 #include <cstdio>
@@ -69,6 +68,9 @@
 //Thread
 #include <iostream>
 #include <thread>
+
+//SHA256
+#include "sha256.h"
 
 //Alljoyn Services
 #include <CommonSampleUtil.h>
@@ -105,13 +107,16 @@
 #define MUZZLEY_DEFAULT_API_PORT 80
 #define MUZZLEY_DEFAULT_MANAGER_PORT 80
 
+#define MUZZLEY_DEFAULT_SEMAPHORE_FILENAME "muzzley_semaphore.txt"
 #define MUZZLEY_DEFAULT_MANAGER_REGISTER_URL "/deviceapp/register"
 #define MUZZLEY_DEFAULT_MANAGER_COMPONENTS_URL "/deviceapp/components"
-#define MUZZLEY_SEMAPHORE_FILENAME "muzzley_semaphore.txt"
-#define MUZZLEY_LIGHTING_DEVICEKEY_FILENAME "lighting_key.txt"
-#define MUZZLEY_PLUGS_DEVICEKEY_FILENAME "plugs_key.txt"
-#define MUZZLEY_LIGHTING_XML_FILENAME "muzzley_lighting.xml"
-#define MUZZLEY_PLUGS_XML_FILENAME "muzzley_plugs.xml"
+#define MUZZLEY_DEFAULT_LIGHTING_DEVICEKEY_FILENAME "lighting_key.key"
+#define MUZZLEY_DEFAULT_PLUGS_DEVICEKEY_FILENAME "plugs_key.key"
+#define MUZZLEY_DEFAULT_LIGHTING_XML_FILENAME "muzzley_lighting.xml"
+#define MUZZLEY_DEFAULT_LIGHTING_XML_FILEPATH "/tmp"
+#define MUZZLEY_DEFAULT_PLUGS_XML_FILENAME "muzzley_plugs.key"
+#define MUZZLEY_DEFAULT_PLUGS_XML_FILEPATH "/tmp"
+
 #define MUZZLEY_WORKSPACE "iot"
 #define MUZZLEY_UNKNOWN_NAME "---"
 #define MUZZLEY_LOOPASSYNCHRONOUS true
@@ -182,6 +187,7 @@
 #define MUZZLEY_DEFAULT_NETWORK_PLUGS_PORT 51000
 #define MUZZLEY_DEFAULT_STATUS_INTERVAL 60
 
+
 //Mac Address
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -199,21 +205,26 @@ using namespace lsf;
 using namespace ajn;
 using namespace services;
 
+string muzzley_semaphore_filename="";
 string muzzley_color_mode="";
 string muzzley_core_endpointhost="";
 string muzzley_api_endpointhost="";
 string muzzley_manager_endpointhost="";
 string muzzley_manager_register_url="";
 string muzzley_manager_components_url="";
+
 string muzzley_lighting_profileid="";
 string muzzley_lighting_apptoken="";
+string muzzley_lighting_deviceKey_filename="";
 string muzzley_lighting_upnp_friendlyname="";
 string muzzley_lighting_upnp_udn="";
 string muzzley_lighting_upnp_serialnumber="";
 string muzzley_lighting_upnp_urn="";
 string muzzley_lighting_upnp_host="";
 string muzzley_lighting_upnp_xml_filepath="";
+string muzzley_lighting_upnp_description_path="";
 string muzzley_lighting_upnp_interface="";
+string muzzley_lighting_upnp_xml_filename="";
 string muzzley_lighting_sessionid="";
 string muzzley_lighting_macAddress="";
 string muzzley_lighting_deviceKey="";
@@ -221,13 +232,16 @@ int muzzley_lighting_upnp_port=0;
 
 string muzzley_plugs_profileid="";
 string muzzley_plugs_apptoken="";
+string muzzley_plugs_deviceKey_filename="";
 string muzzley_plugs_upnp_friendlyname="";
 string muzzley_plugs_upnp_udn="";
 string muzzley_plugs_upnp_serialnumber="";
 string muzzley_plugs_upnp_urn="";
 string muzzley_plugs_upnp_host="";
 string muzzley_plugs_upnp_xml_filepath="";
+string muzzley_plugs_upnp_description_path="";
 string muzzley_plugs_upnp_interface="";
+string muzzley_plugs_upnp_xml_filename="";
 string muzzley_plugs_sessionid="";
 string muzzley_plugs_macAddress="";
 string muzzley_plugs_deviceKey="";
@@ -242,6 +256,7 @@ string muzzley_modelnumber="";
 int muzzley_api_port=0;
 int muzzley_manager_port=0;
 bool muzzley_OnBehalfOf=true;
+
 
 bool muzzley_controllerclient_connected=false;
 string muzzley_controllerclient_status="";
@@ -266,6 +281,16 @@ ControllerNotificationReceiver* controller_receiver=0;
 
 BusAttachment* bus;
 
+struct Muzzley_Thing {
+   string id;
+   string uuid;
+   string name;
+   string kind;
+   string provider;
+};
+
+Muzzley_Thing lighting_thing;
+Muzzley_Thing plugs_thing;
 
 //Component/property/CID/t/time/type
 typedef tuple <string, string, string, int, time_t, string> muzzley_req;
@@ -334,7 +359,7 @@ void semaphore_unlock(int& semaphore) {
 }
 
 int semaphore_start(){
-    key_t key = ftok(MUZZLEY_SEMAPHORE_FILENAME, 1);
+    key_t key = ftok(muzzley_semaphore_filename.c_str(), 1);
     int semaphore = semget(key, 1, IPC_CREAT | 0777);
     if (semaphore == -1)
         cout << "Error on semaphore" << endl << flush;
@@ -343,12 +368,12 @@ int semaphore_start(){
 
 void semaphore_stop(int sig) {
     //Destroy the Semaphore
-    key_t key = ftok(MUZZLEY_SEMAPHORE_FILENAME, 1); // connects to the same semaphore
+    key_t key = ftok(muzzley_semaphore_filename.c_str(), 1); // connects to the same semaphore
     int semaphore = semget(key, 1, IPC_CREAT | 0777);
     semctl(semaphore, 0, IPC_RMID);
     cout << "Exiting publish semaphore..." << endl << flush;
     
-    string s = MUZZLEY_SEMAPHORE_FILENAME;
+    string s = muzzley_semaphore_filename;
     unlink (s.c_str());
     exit(0);
 }
@@ -364,15 +389,15 @@ bool muzzley_check_semaphore_file_exists(string filename){
 
 void muzzley_write_semaphore_file(){
     ofstream myfile;
-    myfile.open (MUZZLEY_SEMAPHORE_FILENAME);    
-    myfile << "muzzley_connector_running";
+    myfile.open (muzzley_semaphore_filename.c_str());
+    myfile << muzzley_lighting_apptoken+muzzley_plugs_apptoken;
     myfile.close();
 }
 
 string muzzley_read_lighting_deviceKey_file(){
     ifstream myfile;
     string line;
-    myfile.open (MUZZLEY_LIGHTING_DEVICEKEY_FILENAME);
+    myfile.open (muzzley_lighting_deviceKey_filename.c_str());
     getline(myfile, line);
     myfile.close();
     return line;    
@@ -380,7 +405,7 @@ string muzzley_read_lighting_deviceKey_file(){
 
 void muzzley_write_lighting_deviceKey_file(string deviceKey){
     ofstream myfile;
-    myfile.open (MUZZLEY_LIGHTING_DEVICEKEY_FILENAME);    
+    myfile.open (muzzley_lighting_deviceKey_filename.c_str());    
     myfile << deviceKey;
     myfile.close();
 }
@@ -388,7 +413,7 @@ void muzzley_write_lighting_deviceKey_file(string deviceKey){
 string muzzley_read_plugs_deviceKey_file(){
     ifstream myfile;
     string line;
-    myfile.open (MUZZLEY_PLUGS_DEVICEKEY_FILENAME);
+    myfile.open (muzzley_plugs_deviceKey_filename);
     getline(myfile, line);
     myfile.close();
     return line;    
@@ -396,7 +421,7 @@ string muzzley_read_plugs_deviceKey_file(){
 
 void muzzley_write_plugs_deviceKey_file(string deviceKey){
     ofstream myfile;
-    myfile.open (MUZZLEY_PLUGS_DEVICEKEY_FILENAME);    
+    myfile.open (muzzley_plugs_deviceKey_filename);    
     myfile << deviceKey;
     myfile.close();
 }
@@ -1048,124 +1073,144 @@ void gupnp_generate_lighting_XML(){
         responseStream << "</root>\n";
 
         ofstream myfile;
-        myfile.open (MUZZLEY_LIGHTING_XML_FILENAME);
+        myfile.open (muzzley_lighting_upnp_xml_filepath + "/" + muzzley_lighting_upnp_xml_filename);
         const std::string tmp = responseStream.str();
         const char* str_xml = tmp.c_str();    
         myfile << str_xml;
         myfile.close();
     }
 
-bool muzzley_lighting_connect_API(){
 
-    // Instantiate an HTTP(s) socket stream
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_api_endpointhost, muzzley_api_port); //HTTPS:443
+muzzley::HTTPRep muzzley_send_http_request(string host, int port, muzzley::HTTPMethod http_method, string url, string serialnumber, string deviceKey, muzzley::JSONObj _json_body_part){
+    try{
+        // Instantiate an HTTP(s) socket stream
+        muzzley::socketstream _socket;
+        _socket.open(host, port); //HTTPS:443
 
-    // Instantiate an HTTP request object
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPGet);
+        // Instantiate an HTTP request object
+        muzzley::HTTPReq _req;
+        _req->method(http_method);
 
-    // set HTTP request server path
-    std::stringstream url;
-    url << "/profiles/" << muzzley_lighting_profileid;
-    _req->url(url.str());
-    _req->header("Host", muzzley_api_endpointhost);
-    _req->header("Accept", "*/*");
+        string _str_body_part;
+        _json_body_part->stringify(_str_body_part);
 
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
+        std::ostringstream ss;
+        int lenght = _str_body_part.length();
+        ss << lenght;
 
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
+        _req->url(url);
+        _req->header("Host", host);
+        _req->header("Accept", "*/*");
+        _req->header("Content-Type", "application/json");
+        _req->header("Content-Length", ss.str());
+        if(strcmp(serialnumber.c_str(),"")==0){}
+        else{
+            _req->header("SerialNumber", serialnumber);
+        }
+        if(strcmp(deviceKey.c_str(), "")==0){}
+        else{
+            _req->header("DeviceKey", deviceKey);
+        }   
 
-    _socket.close();
+        _req->body(_str_body_part);
+        _socket << _req << flush;
+        cout << endl << _req << endl << endl << flush;
 
-    if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
-        // Print the value of a message header
+        // Instantiate an HTTP response object
+        muzzley::HTTPRep _rep;
+        _socket >> _rep;
+        _socket.close();
+
+        return _rep;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        muzzley::HTTPRep _rep;
+        return _rep;
+    } 
+}
+
+ muzzley::HTTPRep muzzley_send_api_http_request(string host, int port, string profileid){
+    try{
+
+        // set HTTP request method
+        muzzley::HTTPMethod http_method = muzzley::HTTPGet;
+
+        // set HTTP request server path
+        std::stringstream url_stream;
+        url_stream << "/profiles/" << profileid;
+        string url = url_stream.str();
+
+        // set HTTP request body content
+        muzzley::JSONObj _json_body_part;
+        
+        return muzzley_send_http_request(host, port, http_method, url, "", "", _json_body_part);
+        
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        muzzley::HTTPRep _rep;
+        return _rep;
+    }   
+}
+
+Muzzley_Thing muzzley_parse_api_http_reply(muzzley::HTTPRep _rep){
+    try{
+        Muzzley_Thing thing;
         muzzley::JSONObj _url = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
         cout << "Parsed Muzzley API Reply:" << endl << flush;
         cout << "id: " << (string)_url["id"] << endl << flush;
         cout << "uuid: " << (string)_url["uuid"] << endl << flush;
+        cout << "kind: " << (string)_url["kind"] << endl << flush;
         cout << "name: " << (string)_url["name"] << endl << flush;
-        cout << "provider: " << (string)_url["provider"] << endl << flush;
-        cout << "deviceHandlerUrl: " << (string)_url["deviceHandlerUrl"] << endl << endl << flush;
-        string str_url=(string)_url["deviceHandlerUrl"];
-
-    }else{
-        cout << "Error: " << _rep->status() << endl << flush; 
-        return false;
+        cout << "provider: " << (string)_url["provider"] << endl << endl << flush;
+        
+        thing.id = (string)_url["id"];
+        thing.uuid = (string)_url["uuid"];
+        thing.name = (string)_url["name"];
+        thing.kind = (string)_url["kind"];
+        thing.provider = (string)_url["provider"];
+        return thing;
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        Muzzley_Thing thing;
+        thing.id="";
+        thing.uuid="";
+        thing.name="";
+        thing.kind="";
+        thing.provider="";
+        return thing;
     }
-
-    return true;
 }
 
-bool muzzley_lighting_connect_manager(){
-
-    // Instantiate an HTTP(s) socket stream
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
-
-    // Instantiate an HTTP request object
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPPost);
-
-    muzzley_lighting_deviceKey=muzzley_read_lighting_deviceKey_file();
-    cout << "File lighting device key: " << muzzley_lighting_deviceKey << endl << flush;
-
-    // Instantiate a string with some body part
-    muzzley::JSONObj _json_body_part;
-        _json_body_part <<
-            "profileId" << muzzley_lighting_profileid <<
-            "macAddress" << muzzley_lighting_macAddress <<
-            "serialNumber" << muzzley_lighting_upnp_serialnumber <<
-            "friendlyName" << muzzley_lighting_upnp_friendlyname;
-
-            if(muzzley_lighting_deviceKey!=""){
-                _json_body_part <<
-                "deviceKey" << muzzley_lighting_deviceKey;
-            }
-
-    string _str_body_part;
-    _json_body_part->stringify(_str_body_part); 
-    
-    std::ostringstream ss;
-    int lenght = _str_body_part.length();
-    ss << lenght;
-
-    // set HTTP request server path
-    _req->url(muzzley_manager_register_url);
-    _req->header("Host", muzzley_manager_endpointhost);
-    _req->header("Accept", "*/*");
-    _req->header("Content-Type", "application/json");
-    _req->header("Content-Length", ss.str());
-
-    _req->body(_str_body_part);
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
-
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
-    
-    if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
-        // Print the value of a message header
-        muzzley::JSONObj _key = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
-        cout << endl << "Parsed Global Manager Reply:" << endl << "Lighting deviceKey: " << (string)_key["deviceKey"] << endl << endl << flush;
+muzzley::HTTPRep muzzley_send_globalmanager_http_request(string host, int port, string profileid, string channelid, string macAddress, string serialNumber, string friendlyName ){
+    try{
         
-        //Store deviceKey in a file
-        muzzley_lighting_deviceKey = (string)_key["deviceKey"];
-        muzzley_write_lighting_deviceKey_file(muzzley_lighting_deviceKey);
+        // set HTTP request method
+        muzzley::HTTPMethod http_method = muzzley::HTTPPost;
+        
+        // set HTTP request server path
+        string url = muzzley_manager_register_url;
+
+        // set HTTP request body content
+        muzzley::JSONObj _json_body_part;
+            _json_body_part <<
+                "profileId" << profileid <<
+                "macAddress" << macAddress <<
+                "serialNumber" << serialNumber <<
+                "friendlyName" << friendlyName;
+
+                if(channelid!=""){
+                    _json_body_part <<
+                    "deviceKey" << channelid;
+                }
+
+        return muzzley_send_http_request(host, port, http_method, url, serialNumber, channelid, _json_body_part);
+
+    }catch(exception& e){
+        cout << "Exception: " << e.what() << endl << flush;
+        muzzley::HTTPRep _rep;
+        return _rep;
     }
-    else{
-        cout << "Error: " << _rep->status() << endl << flush;
-    }
-
-    _socket.close();
-
-    muzzley_lighting_registered=true;
-
-    return true;
+    
 }
 
 bool muzzley_replace_lighting_components(){
@@ -1177,13 +1222,27 @@ bool muzzley_replace_lighting_components(){
         return false;
     }
 
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
 
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPPost);
+    // set HTTP request host
+    string host = muzzley_manager_endpointhost;
+
+    // set HTTP request port
+    int port = muzzley_manager_port;
+
+    // set HTTP request method
+    muzzley::HTTPMethod http_method = muzzley::HTTPGet;
+
+    // set HTTP request server path
+    string url = muzzley_manager_components_url;
+
+    // set Header serialnumber
+    string serialNumber = muzzley_lighting_upnp_serialnumber;
+
+    // set Hearder deviceKey
+    string deviceKey = muzzley_lighting_deviceKey;
 
 
+    // set HTTP request body content
     muzzley::JSONArr _components;
     if(MUZZLEY_BRIDGE_INFO){
         muzzley::JSONObj _bridge = JSON(
@@ -1194,7 +1253,6 @@ bool muzzley_replace_lighting_components(){
     _components << _bridge;
     }
     
-
     LSFStringList::const_iterator it = lampList.begin();
     for (; it != lampList.end(); ++it) {
         muzzley::JSONObj _bulb = JSON(
@@ -1205,42 +1263,18 @@ bool muzzley_replace_lighting_components(){
             _components << _bulb;
     }
 
-
-    // Instantiate a string with some body part
-    muzzley::JSONObj _replace_components;
-        _replace_components <<
+    muzzley::JSONObj _json_body_part;
+        _json_body_part <<
             "components" << _components;
 
-    string _str_replace_components;
-    _replace_components->stringify(_str_replace_components);
+
+    muzzley::HTTPRep _rep = muzzley_send_http_request(host, port, http_method, url, serialNumber, deviceKey, _json_body_part);
        
-    std::ostringstream ss;
-    int lenght = _str_replace_components.length();
-    ss << lenght;
-
-    //set HTTP request server path
-    _req->url(muzzley_manager_components_url);
-    _req->header("Host", muzzley_manager_endpointhost);
-    _req->header("Accept", "*/*");
-    _req->header("Content-Type", "application/json");
-    _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
-    _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
-
-
-    _req->body(_str_replace_components);
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
-
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
-        
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        return false;
     }
-    _socket.close();
     return true;
 }
 
@@ -1252,14 +1286,26 @@ bool muzzley_add_lighting_component(LSFString lampID, LSFString lampName){
     if(muzzley_lighting_registered==false){
         return false;
     }
+    
+    // set HTTP request host
+    string host = muzzley_manager_endpointhost;
 
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
+    // set HTTP request port
+    int port = muzzley_manager_port;
 
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPPut);
+    // set HTTP request method
+    muzzley::HTTPMethod http_method = muzzley::HTTPPut;
 
+    // set HTTP request server path
+    string url = muzzley_manager_components_url;
 
+    // set Header serialnumber
+    string serialNumber = muzzley_lighting_upnp_serialnumber;
+
+    // set Hearder deviceKey
+    string deviceKey = muzzley_lighting_deviceKey;
+
+    // set HTTP request body content
     muzzley::JSONArr _component;
     muzzley::JSONObj _bulb = JSON(
         "id" <<  lampID <<
@@ -1268,41 +1314,18 @@ bool muzzley_add_lighting_component(LSFString lampID, LSFString lampName){
     );
     _component << _bulb;
 
-
-    // Instantiate a string with some body part
-    muzzley::JSONObj _add_components;
-        _add_components <<
+    muzzley::JSONObj _json_body_part;
+        _json_body_part <<
             "components" << _component;
 
-    string _str_add_component;
-    _add_components->stringify(_str_add_component);
-     
-    std::ostringstream ss;
-    int lenght = _str_add_component.length();
-    ss << lenght;
-       
-    //set HTTP request server path
-    _req->url(muzzley_manager_components_url);
-    _req->header("Host", muzzley_manager_endpointhost);
-    _req->header("Accept", "*/*");
-    _req->header("Content-Type", "application/json");
-    _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
-    _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
-
-    _req->body(_str_add_component);
-    _socket << _req << flush;
-    cout << endl <<_req << endl << flush;
-
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
-        
+    muzzley::HTTPRep _rep = muzzley_send_http_request(host, port, http_method, url, serialNumber, deviceKey, _json_body_part);
+    
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        return false;
     }
-    _socket.close();
+   
     return true;
 }
 
@@ -1316,13 +1339,25 @@ bool muzzley_add_lighting_components(LSFStringList new_lampIDs){
         return false;
     }
 
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
+    // set HTTP request host
+    string host = muzzley_manager_endpointhost;
 
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPPut);
+    // set HTTP request port
+    int port = muzzley_manager_port;
 
+    // set HTTP request method
+    muzzley::HTTPMethod http_method = muzzley::HTTPPut;
 
+    // set HTTP request server path
+    string url = muzzley_manager_components_url;
+
+    // set Header serialnumber
+    string serialNumber = muzzley_lighting_upnp_serialnumber;
+
+    // set Hearder deviceKey
+    string deviceKey = muzzley_lighting_deviceKey;
+
+    // set HTTP request body content
     muzzley::JSONArr _components;
     LSFStringList::const_iterator it = new_lampIDs.begin();
     for (; it != new_lampIDs.end(); ++it) {
@@ -1334,41 +1369,17 @@ bool muzzley_add_lighting_components(LSFStringList new_lampIDs){
             _components << _bulb;
     }
 
-    // Instantiate a string with some body part
-    muzzley::JSONObj _add_components;
-        _add_components <<
+    muzzley::JSONObj _json_body_part;
+        _json_body_part <<
             "components" << _components;
 
-    string _str_add_components;
-    _add_components->stringify(_str_add_components);
-   
-    std::ostringstream ss;
-    int lenght = _str_add_components.length();
-    ss << lenght;
-      
-    //set HTTP request server path
-    _req->url(muzzley_manager_components_url);
-    _req->header("Host", muzzley_manager_endpointhost);
-    _req->header("Accept", "*/*");
-    _req->header("Content-Type", "application/json");
-    _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
-    _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
-
-
-    _req->body(_str_add_components);
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
-
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
-        
+    muzzley::HTTPRep _rep = muzzley_send_http_request(host, port, http_method, url, serialNumber, deviceKey, _json_body_part);
+    
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
     }
-    _socket.close();
+    
     return true;
 }
 
@@ -1381,13 +1392,25 @@ bool muzzley_remove_lighting_components(LSFStringList del_lampIDs){
         return false;
     }
 
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
+    // set HTTP request host
+    string host = muzzley_manager_endpointhost;
 
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPDelete);
+    // set HTTP request port
+    int port = muzzley_manager_port;
 
+    // set HTTP request method
+    muzzley::HTTPMethod http_method = muzzley::HTTPDelete;
 
+    // set HTTP request server path
+    string url = muzzley_manager_components_url;
+
+    // set Header serialnumber
+    string serialNumber = muzzley_lighting_upnp_serialnumber;
+
+    // set Hearder deviceKey
+    string deviceKey = muzzley_lighting_deviceKey;
+
+    // set HTTP request body content
     muzzley::JSONArr _components;
     LSFStringList::const_iterator it = del_lampIDs.begin();
     for (; it != del_lampIDs.end(); ++it) {
@@ -1397,41 +1420,19 @@ bool muzzley_remove_lighting_components(LSFStringList del_lampIDs){
             _components << _bulb;
     }
 
-    // Instantiate a string with some body part
-    muzzley::JSONObj _del_components;
-        _del_components <<
+    muzzley::JSONObj _json_body_part;
+        _json_body_part <<
             "components" << _components;
 
-    string _str_del_components;
-    _del_components->stringify(_str_del_components);
-   
-    std::ostringstream ss;
-    int lenght = _str_del_components.length();
-    ss << lenght;
 
-    //set HTTP request server path
-    _req->url(muzzley_manager_components_url);
-    _req->header("Host", muzzley_manager_endpointhost);
-    _req->header("Accept", "*/*");
-    _req->header("Content-Type", "application/json");
-    _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
-    _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
-
-
-    _req->body(_str_del_components);
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
-
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
+    muzzley::HTTPRep _rep = muzzley_send_http_request(host, port, http_method, url, serialNumber, deviceKey, _json_body_part);
         
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        return false;
     }
-    _socket.close();
+    
     return true;
 }
 
@@ -1477,124 +1478,11 @@ void gupnp_generate_plugs_XML(){
     responseStream << "</root>\n";
 
     ofstream myfile;
-    myfile.open (MUZZLEY_PLUGS_XML_FILENAME);
+    myfile.open (muzzley_plugs_upnp_xml_filepath + "/" + muzzley_plugs_upnp_xml_filename);
     const std::string tmp = responseStream.str();
     const char* str_xml = tmp.c_str();    
     myfile << str_xml;
     myfile.close();
-}
-
-
-bool muzzley_plugs_connect_API(){
-    // Instantiate an HTTP(s) socket stream
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_api_endpointhost, muzzley_api_port); //HTTPS:443
-
-    // Instantiate an HTTP request object
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPGet);
-
-    // set HTTP request server path
-    std::stringstream url;
-    url << "/profiles/" << muzzley_plugs_profileid;
-    _req->url(url.str());
-    _req->header("Host", muzzley_api_endpointhost);
-    _req->header("Accept", "*/*");
-
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
-
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
-
-    _socket.close();
-
-    if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
-        // Print the value of a message header
-        muzzley::JSONObj _url = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
-        cout << "Parsed Muzzley API Reply:" << endl << flush;
-        cout << "id: " << (string)_url["id"] << endl << flush;
-        cout << "uuid: " << (string)_url["uuid"] << endl << flush;
-        cout << "name: " << (string)_url["name"] << endl << flush;
-        cout << "provider: " << (string)_url["provider"] << endl << flush;
-        cout << "deviceHandlerUrl: " << (string)_url["deviceHandlerUrl"] << endl << endl << flush;
-        string str_url=(string)_url["deviceHandlerUrl"];
-
-    }else{
-        cout << "Error: " << _rep->status() << endl << flush; 
-        return false;
-    }
-
-    return true;
-}
-
-bool muzzley_plugs_connect_manager(){
-
-    // Instantiate an HTTP(s) socket stream
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
-
-    // Instantiate an HTTP request object
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPPost);
-
-    muzzley_plugs_deviceKey=muzzley_read_plugs_deviceKey_file();
-    cout << "File plugs device key: " << muzzley_plugs_deviceKey << endl << flush;
-
-    // Instantiate a string with some body part
-    muzzley::JSONObj _json_body_part;
-        _json_body_part <<
-            "profileId" << muzzley_plugs_profileid <<
-            "macAddress" << muzzley_plugs_macAddress <<
-            "serialNumber" << muzzley_plugs_upnp_serialnumber <<
-            "friendlyName" << muzzley_plugs_upnp_friendlyname;
-
-            if(muzzley_plugs_deviceKey!=""){
-                _json_body_part <<
-                "deviceKey" << muzzley_plugs_deviceKey;
-            }
-
-    string _str_body_part;
-    _json_body_part->stringify(_str_body_part); 
-    
-    std::ostringstream ss;
-    int lenght = _str_body_part.length();
-    ss << lenght;
-
-    // set HTTP request server path
-    _req->url(muzzley_manager_register_url);
-    _req->header("Host", muzzley_manager_endpointhost);
-    _req->header("Accept", "*/*");
-    _req->header("Content-Type", "application/json");
-    _req->header("Content-Length", ss.str());
-
-    _req->body(_str_body_part);
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
-
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
-    
-    if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
-        // Print the value of a message header
-        muzzley::JSONObj _key = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
-        cout << endl << "Parsed Global Manager Reply:" << endl << "Plugs deviceKey: " << (string)_key["deviceKey"] << endl << endl << flush;
-        
-        //Store deviceKey in a file
-        muzzley_plugs_deviceKey = (string)_key["deviceKey"];
-        muzzley_write_plugs_deviceKey_file(muzzley_plugs_deviceKey);
-    }
-    else{
-        cout << "Error: " << _rep->status() << endl << flush;
-    }
-
-    _socket.close();
-
-    muzzley_plugs_registered=true;
-
-    return true;
 }
 
 bool muzzley_replace_plugs_components(){
@@ -1606,15 +1494,26 @@ bool muzzley_replace_plugs_components(){
         return false;
     }
 
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
+    // set HTTP request host
+    string host = muzzley_manager_endpointhost;
 
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPPost);
+    // set HTTP request port
+    int port = muzzley_manager_port;
 
+    // set HTTP request method
+    muzzley::HTTPMethod http_method = muzzley::HTTPPost;
 
+    // set HTTP request server path
+    string url = muzzley_manager_components_url;
+
+    // set Header serialnumber
+    string serialNumber = muzzley_plugs_upnp_serialnumber;
+
+    // set Hearder deviceKey
+    string deviceKey = muzzley_plugs_deviceKey;
+
+    // set HTTP request body content
     muzzley::JSONArr _components;
-    
     for (unsigned int i = 0; i < plug_vec.size(); i++){
         muzzley::JSONObj _bulb = JSON(
             "id" <<  get<0>(plug_vec[i]) <<
@@ -1624,40 +1523,18 @@ bool muzzley_replace_plugs_components(){
         _components << _bulb;
     }
 
-    // Instantiate a string with some body part
-    muzzley::JSONObj _replace_components;
-        _replace_components <<
+    muzzley::JSONObj _json_body_part;
+        _json_body_part <<
             "components" << _components;
 
-    string _str_replace_components;
-    _replace_components->stringify(_str_replace_components);
-       
-    std::ostringstream ss;
-    int lenght = _str_replace_components.length();
-    ss << lenght;
 
-    //set HTTP request server path
-    _req->url(muzzley_manager_components_url);
-    _req->header("Host", muzzley_manager_endpointhost);
-    _req->header("Accept", "*/*");
-    _req->header("Content-Type", "application/json");
-    _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_plugs_upnp_serialnumber);
-    _req->header("DEVICEKEY", muzzley_plugs_deviceKey);
+    muzzley::HTTPRep _rep = muzzley_send_http_request(host, port, http_method, url, serialNumber, deviceKey, _json_body_part);
 
-    _req->body(_str_replace_components);
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
-
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
-        
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        return false;
     }
-    _socket.close();
     return true;
 }
 bool muzzley_add_plugs_component(string plug_id, string plug_name){
@@ -1669,12 +1546,25 @@ bool muzzley_add_plugs_component(string plug_id, string plug_name){
         return false;
     }
 
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
+    // set HTTP request host
+    string host = muzzley_manager_endpointhost;
 
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPPut);
+    // set HTTP request port
+    int port = muzzley_manager_port;
 
+    // set HTTP request method
+    muzzley::HTTPMethod http_method = muzzley::HTTPPut;
+
+    // set HTTP request server path
+    string url = muzzley_manager_components_url;
+
+    // set Header serialnumber
+    string serialNumber = muzzley_plugs_upnp_serialnumber;
+
+    // set Hearder deviceKey
+    string deviceKey = muzzley_plugs_deviceKey;
+
+    // set HTTP request body content
     muzzley::JSONArr _component;
     muzzley::JSONObj _plug = JSON(
         "id" <<  plug_id <<
@@ -1683,41 +1573,19 @@ bool muzzley_add_plugs_component(string plug_id, string plug_name){
     );
     _component << _plug;
 
-
-    // Instantiate a string with some body part
-    muzzley::JSONObj _add_components;
-        _add_components <<
+    muzzley::JSONObj _json_body_part;
+        _json_body_part <<
             "components" << _component;
 
-    string _str_add_component;
-    _add_components->stringify(_str_add_component);
-     
-    std::ostringstream ss;
-    int lenght = _str_add_component.length();
-    ss << lenght;
-       
-    //set HTTP request server path
-    _req->url(muzzley_manager_components_url);
-    _req->header("Host", muzzley_manager_endpointhost);
-    _req->header("Accept", "*/*");
-    _req->header("Content-Type", "application/json");
-    _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
-    _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
-    _req->body(_str_add_component);
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
+    muzzley::HTTPRep _rep = muzzley_send_http_request(host, port, http_method, url, serialNumber, deviceKey, _json_body_part);
 
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
-        
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        return false;
     }
-    _socket.close();
+
     return true;
 }
 
@@ -1730,12 +1598,25 @@ bool muzzley_add_plugs_components(string plug_id, string plug_name){
         return false;
     }
 
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
+    // set HTTP request host
+    string host = muzzley_manager_endpointhost;
 
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPPut);
+    // set HTTP request port
+    int port = muzzley_manager_port;
 
+    // set HTTP request method
+    muzzley::HTTPMethod http_method = muzzley::HTTPPut;
+
+    // set HTTP request server path
+    string url = muzzley_manager_components_url;
+
+    // set Header serialnumber
+    string serialNumber = muzzley_plugs_upnp_serialnumber;
+
+    // set Hearder deviceKey
+    string deviceKey = muzzley_plugs_deviceKey;
+
+    // set HTTP request body content
     muzzley::JSONArr _components;
     muzzley::JSONObj _plug = JSON(
         "id" <<  plug_id <<
@@ -1744,41 +1625,19 @@ bool muzzley_add_plugs_components(string plug_id, string plug_name){
     );
     _components << _plug;
 
-    // Instantiate a string with some body part
-    muzzley::JSONObj _add_components;
-        _add_components <<
+    muzzley::JSONObj _json_body_part;
+        _json_body_part <<
             "components" << _components;
 
-    string _str_add_components;
-    _add_components->stringify(_str_add_components);
-   
-    std::ostringstream ss;
-    int lenght = _str_add_components.length();
-    ss << lenght;
-      
-    //set HTTP request server path
-    _req->url(muzzley_manager_components_url);
-    _req->header("Host", muzzley_manager_endpointhost);
-    _req->header("Accept", "*/*");
-    _req->header("Content-Type", "application/json");
-    _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
-    _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
 
-
-    _req->body(_str_add_components);
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
-
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
+    muzzley::HTTPRep _rep = muzzley_send_http_request(host, port, http_method, url, serialNumber, deviceKey, _json_body_part);
         
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        return false;
     }
-    _socket.close();
+
     return true;
 }
 
@@ -1791,15 +1650,26 @@ bool muzzley_remove_plugs_component(string plug_id, string plug_name){
         return false;
     }
 
-    muzzley::socketstream _socket;
-    _socket.open(muzzley_manager_endpointhost, muzzley_manager_port);
+    // set HTTP request host
+    string host = muzzley_manager_endpointhost;
 
-    muzzley::HTTPReq _req;
-    _req->method(muzzley::HTTPDelete);
+    // set HTTP request port
+    int port = muzzley_manager_port;
 
+    // set HTTP request method
+    muzzley::HTTPMethod http_method = muzzley::HTTPDelete;
 
+    // set HTTP request server path
+    string url = muzzley_manager_components_url;
+
+    // set Header serialnumber
+    string serialNumber = muzzley_plugs_upnp_serialnumber;
+
+    // set Hearder deviceKey
+    string deviceKey = muzzley_plugs_deviceKey;
+
+    // set HTTP request body content
     muzzley::JSONArr _components;
-    
     muzzley::JSONObj _plug = JSON(
         "id" <<  plug_id <<
         "label" << plug_name <<
@@ -1807,41 +1677,18 @@ bool muzzley_remove_plugs_component(string plug_id, string plug_name){
     );
     _components << _plug;
 
-    // Instantiate a string with some body part
-    muzzley::JSONObj _del_components;
-        _del_components <<
+    muzzley::JSONObj _json_body_part;
+        _json_body_part <<
             "components" << _components;
 
-    string _str_del_components;
-    _del_components->stringify(_str_del_components);
-   
-    std::ostringstream ss;
-    int lenght = _str_del_components.length();
-    ss << lenght;
 
-    //set HTTP request server path
-    _req->url(muzzley_manager_components_url);
-    _req->header("Host", muzzley_manager_endpointhost);
-    _req->header("Accept", "*/*");
-    _req->header("Content-Type", "application/json");
-    _req->header("Content-Length", ss.str());
-    _req->header("SERIALNUMBER", muzzley_lighting_upnp_serialnumber);
-    _req->header("DEVICEKEY", muzzley_lighting_deviceKey);
-
-
-    _req->body(_str_del_components);
-    _socket << _req << flush;
-    cout << endl << _req << endl << flush;
-
-    // Instantiate an HTTP response object
-    muzzley::HTTPRep _rep;
-    _socket >> _rep;
-        
+    muzzley::HTTPRep _rep = muzzley_send_http_request(host, port, http_method, url, serialNumber, deviceKey, _json_body_part);
+    
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        return false;
     }
-    _socket.close();
     return true;
 }
 
@@ -2090,8 +1937,6 @@ bool muzzley_publish(string workspace, string profileId, string channelId, strin
         return false;
     }    
 }
-
-
 
 
 bool muzzley_publish_lampReachable(LSFString lampID, bool reachable, muzzley::Client* _muzzley_lighting_client){
@@ -3151,7 +2996,7 @@ void muzzley_parse_plugs_controlpanelunit(string device_id_str, string device_na
                     for (size_t i = 0; i < childWidgets.size(); i++) {
                         WidgetType widgetType = childWidgets[i]->getWidgetType();
                         qcc::String name = childWidgets[i]->getWidgetName();
-                         bool secured = childWidgets[i]->getIsSecured();
+                        bool secured = childWidgets[i]->getIsSecured();
                         bool enabled = childWidgets[i]->getIsEnabled();
                         bool writable = childWidgets[i]->getIsWritable();
 
@@ -3445,7 +3290,7 @@ void upnp_info(string urn, string host, string xml_file_path, int port,
 
     cout << "URN: " << urn << endl << flush;
     cout << "HOST: " << host << endl << flush;
-    cout << "XML FILE PATH: " << xml_file_path << endl << flush;
+    cout << "XML DESCRIPTION PATH: " << xml_file_path << endl << flush;
     cout << "PORT: " << port << endl << flush;
     cout << "INTERFACE: " << interface << endl << flush;
     cout << "FRIENDLY NAME: " << friendlyname << endl << flush;
@@ -3486,7 +3331,7 @@ void upnp_advertise(){
     
     gupnp_generate_lighting_XML();
 
-    gupnp_lighting_dev = gupnp_root_device_new (gupnp_lighting_context, MUZZLEY_LIGHTING_XML_FILENAME, ".");
+    gupnp_lighting_dev = gupnp_root_device_new (gupnp_lighting_context, muzzley_lighting_upnp_xml_filename.c_str(), muzzley_lighting_upnp_xml_filepath.c_str());
     gupnp_root_device_set_available (gupnp_lighting_dev, TRUE);
     gupnp_lighting_resource_group = gupnp_root_device_get_ssdp_resource_group(gupnp_lighting_dev);
     gssdp_resource_group_set_max_age (gupnp_lighting_resource_group, GUPNP_MAX_AGE);
@@ -3501,7 +3346,7 @@ void upnp_advertise(){
     muzzley_lighting_upnp_host = lighting_host.str(); 
     
     muzzley_lighting_upnp_port=gupnp_context_get_port (gupnp_lighting_context);
-    muzzley_lighting_upnp_xml_filepath=gupnp_root_device_get_description_path(gupnp_lighting_dev);
+    muzzley_lighting_upnp_description_path=gupnp_root_device_get_description_path(gupnp_lighting_dev);
 
     //Plugs UPnP
     gupnp_plugs_context = gupnp_context_new (NULL, muzzley_plugs_upnp_interface.c_str(), muzzley_plugs_upnp_port, &error);
@@ -3513,7 +3358,7 @@ void upnp_advertise(){
 
     gupnp_generate_plugs_XML();
 
-    gupnp_plugs_dev = gupnp_root_device_new (gupnp_plugs_context, MUZZLEY_PLUGS_XML_FILENAME, ".");
+    gupnp_plugs_dev = gupnp_root_device_new (gupnp_plugs_context, muzzley_plugs_upnp_xml_filename.c_str(), muzzley_plugs_upnp_xml_filepath.c_str());
     gupnp_root_device_set_available (gupnp_plugs_dev, TRUE);
     gupnp_plugs_resource_group = gupnp_root_device_get_ssdp_resource_group(gupnp_plugs_dev);
     gssdp_resource_group_set_max_age (gupnp_plugs_resource_group, GUPNP_MAX_AGE);
@@ -3528,7 +3373,7 @@ void upnp_advertise(){
     muzzley_plugs_upnp_host = plugs_host.str(); 
 
     muzzley_plugs_upnp_port=gupnp_context_get_port (gupnp_plugs_context);
-    muzzley_plugs_upnp_xml_filepath=gupnp_root_device_get_description_path(gupnp_plugs_dev);
+    muzzley_plugs_upnp_description_path=gupnp_root_device_get_description_path(gupnp_plugs_dev);
 
     //gssdp_resource_group_add_resource_simple(gupnp_lighting_resource_group, lighting_device_urn_char, lighting_device_urn_char , lighting_host_char );
     //gssdp_resource_group_add_resource_simple(gupnp_plugs_resource_group, plugs_device_urn_char, plugs_device_urn_char , plugs_host_char );
@@ -3543,11 +3388,11 @@ void upnp_advertise(){
 
 void upnp_info_print(){
     cout << endl << "GUPNP LIGHTING INFO:" << endl << flush;
-    upnp_info(muzzley_lighting_upnp_urn, muzzley_lighting_upnp_host, muzzley_lighting_upnp_xml_filepath, muzzley_lighting_upnp_port,
+    upnp_info(muzzley_lighting_upnp_urn, muzzley_lighting_upnp_host, muzzley_lighting_upnp_description_path, muzzley_lighting_upnp_port,
             muzzley_lighting_upnp_interface, muzzley_lighting_upnp_friendlyname, muzzley_lighting_upnp_udn, muzzley_lighting_upnp_serialnumber,
             muzzley_lighting_macAddress, muzzley_manufacturer, muzzley_manufacturer_url, muzzley_modelname, muzzley_modelnumber, muzzley_modeldescription);
     cout << endl << "GUPNP PLUGS INFO:" << endl << flush;
-    upnp_info(muzzley_plugs_upnp_urn, muzzley_plugs_upnp_host, muzzley_plugs_upnp_xml_filepath, muzzley_plugs_upnp_port,
+    upnp_info(muzzley_plugs_upnp_urn, muzzley_plugs_upnp_host, muzzley_plugs_upnp_description_path, muzzley_plugs_upnp_port,
             muzzley_plugs_upnp_interface, muzzley_plugs_upnp_friendlyname, muzzley_plugs_upnp_udn, muzzley_plugs_upnp_serialnumber,
             muzzley_plugs_macAddress, muzzley_manufacturer, muzzley_manufacturer_url, muzzley_modelname, muzzley_modelnumber, muzzley_modeldescription);
 }
@@ -3564,11 +3409,15 @@ void cmd_line_parser_help(){
     cout << "--lighting-friendlyname        set the Muzzley Lighting UPNP Friendlyname" << endl << flush;
     cout << "--lighting-interface           set the Muzzley Lighting UPNP Interface" << endl << flush;
     cout << "--lighting-port                set the Muzzley Lighting UPNP Port" << endl << flush;
+    //cout << "--lighting-xml-filename        set the Muzzley Lighting UPNP Filename" << endl << flush;
+    cout << "--lighting-xml-filepath        set the Muzzley Lighting UPNP Filepath" << endl << flush;
     cout << "--plugs-profileid              set the Muzzley Plugs Profileid" << endl << flush;
     cout << "--plugs-app-token              set the Muzzley Plugs AppToken" << endl << flush; 
     cout << "--plugs-friendlyname           set the Muzzley Plugs UPNP Friendlyname" << endl << flush;       
     cout << "--plugs-interface              set the Muzzley Plugs UPNP Interface" << endl << flush;
     cout << "--plugs-port                   set the Muzzley Plugs UPNP Port" << endl << flush;
+    //cout << "--plugs-xml-filename           set the Muzzley Plugs UPNP Filename" << endl << flush;
+    cout << "--plugs-xml-filepath           set the Muzzley Plugs UPNP Filepath" << endl << flush;
     cout << "--color-mode                   set the Muzzley Interface Color Mode" << endl << flush;
     cout << "--manufacturer                 set the UPnP Manufacturer string" << endl << flush;
     cout << "--manufacturer-url             set the UPnP Manufacturer URL" << endl << flush;
@@ -3634,7 +3483,6 @@ void muzzley_update_lamplist(LampManager* lampManager){
 
 int main(int argc, char* argv[]){
     
-    muzzley_write_semaphore_file();
 
     // Adds listeners for SIGKILL, for gracefull stop
     // It will be invoked when the user hits Ctrl-c
@@ -3662,19 +3510,25 @@ int main(int argc, char* argv[]){
     
     muzzley_lighting_profileid=MUZZLEY_DEFAULT_LIGHTING_PROFILEID;
     muzzley_lighting_apptoken=MUZZLEY_DEFAULT_LIGHTING_APP_TOKEN;
+    muzzley_lighting_deviceKey_filename=MUZZLEY_DEFAULT_LIGHTING_DEVICEKEY_FILENAME;
     muzzley_lighting_upnp_friendlyname=MUZZLEY_DEFAULT_LIGHTING_FRIENDLYNAME;
     muzzley_lighting_upnp_udn=MUZZLEY_DEFAULT_LIGHTING_UDN;
     muzzley_lighting_upnp_serialnumber=MUZZLEY_DEFAULT_LIGHTING_SERIALNUMBER;
     muzzley_lighting_upnp_interface=MUZZLEY_DEFAULT_NETWORK_INTERFACE;
-    muzzley_lighting_upnp_port = MUZZLEY_DEFAULT_NETWORK_LIGHTING_PORT;
+    muzzley_lighting_upnp_port=MUZZLEY_DEFAULT_NETWORK_LIGHTING_PORT;
+    muzzley_lighting_upnp_xml_filename=MUZZLEY_DEFAULT_LIGHTING_XML_FILENAME;
+    muzzley_lighting_upnp_xml_filepath=MUZZLEY_DEFAULT_LIGHTING_XML_FILEPATH;
 
     muzzley_plugs_profileid=MUZZLEY_DEFAULT_PLUGS_PROFILEID;
     muzzley_plugs_apptoken=MUZZLEY_DEFAULT_PLUGS_APP_TOKEN;
+    muzzley_plugs_deviceKey_filename=MUZZLEY_DEFAULT_PLUGS_DEVICEKEY_FILENAME;
     muzzley_plugs_upnp_friendlyname=MUZZLEY_DEFAULT_PLUGS_FRIENDLYNAME;
     muzzley_plugs_upnp_udn=MUZZLEY_DEFAULT_PLUGS_UDN;
     muzzley_plugs_upnp_serialnumber=MUZZLEY_DEFAULT_PLUGS_SERIALNUMBER;
     muzzley_plugs_upnp_interface=MUZZLEY_DEFAULT_NETWORK_INTERFACE;
     muzzley_plugs_upnp_port=MUZZLEY_DEFAULT_NETWORK_PLUGS_PORT;
+    muzzley_plugs_upnp_xml_filename=MUZZLEY_DEFAULT_PLUGS_XML_FILENAME;
+    muzzley_plugs_upnp_xml_filepath=MUZZLEY_DEFAULT_PLUGS_XML_FILEPATH;
 
     muzzley_manufacturer=MUZZLEY_DEFAULT_MANUFACTURER;
     muzzley_manufacturer_url=MUZZLEY_DEFAULT_MANUFACTURER_URL;
@@ -3684,11 +3538,13 @@ int main(int argc, char* argv[]){
 
     muzzley_OnBehalfOf = true;
 
-
     //Get MACAdress info from the current network interface in use
     muzzley_lighting_macAddress = get_iface_macAdress(muzzley_lighting_upnp_interface);
        muzzley_plugs_macAddress = get_iface_macAdress(muzzley_plugs_upnp_interface);
 
+    //Calc the serial number from the macAddress;
+    muzzley_lighting_upnp_serialnumber = sha256(muzzley_lighting_macAddress);
+    muzzley_plugs_upnp_serialnumber = sha256(muzzley_plugs_macAddress);
 
     //Parse cmd line custom Muzzley tokens
     if(argc>1){
@@ -3719,6 +3575,10 @@ int main(int argc, char* argv[]){
                 muzzley_lighting_upnp_interface = argv[i + 1];
             } else if (strcmp(argv[i], "--lighting-port")==0) {
                 muzzley_lighting_upnp_port = atoi(argv[i + 1]);
+            //} else if (strcmp(argv[i], "--lighting-xml-filename")==0) {
+            //    muzzley_lighting_upnp_xml_filename = atoi(argv[i + 1]);
+            } else if (strcmp(argv[i], "--lighting-xml-filepath")==0) {
+                muzzley_lighting_upnp_xml_filepath = atoi(argv[i + 1]);
             } else if (strcmp(argv[i], "--plugs-profileid")==0) {
                 muzzley_plugs_profileid = argv[i + 1];
             } else if (strcmp(argv[i], "--plugs-app-token")==0) {
@@ -3733,6 +3593,10 @@ int main(int argc, char* argv[]){
                 muzzley_lighting_upnp_interface = argv[i + 1];
             } else if (strcmp(argv[i], "--plugs-port")==0) {
                 muzzley_plugs_upnp_port = atoi(argv[i + 1]);
+            //} else if (strcmp(argv[i], "--plugs-xml-filename")==0) {
+            //    muzzley_lighting_upnp_xml_filename = atoi(argv[i + 1]);
+            } else if (strcmp(argv[i], "--plugs-xml-filepath")==0) {
+                muzzley_lighting_upnp_xml_filepath = atoi(argv[i + 1]);
             } else if (strcmp(argv[i], "--color-mode")==0) {
                 if(strcmp(argv[i + 1], PROPERTY_COLOR_RGB)==0){
                 	muzzley_color_mode=PROPERTY_COLOR_RGB;
@@ -3767,6 +3631,20 @@ int main(int argc, char* argv[]){
         }
     }
     
+    //set the semaphore filename
+    muzzley_semaphore_filename=muzzley_lighting_profileid+muzzley_plugs_profileid + ".sem";
+    muzzley_write_semaphore_file();
+
+    //set the DeviceKey filename accordingly with the respective profile id
+    muzzley_lighting_deviceKey_filename=muzzley_lighting_profileid;
+    muzzley_lighting_deviceKey_filename=muzzley_lighting_deviceKey_filename + ".key";
+    muzzley_plugs_deviceKey_filename=muzzley_plugs_profileid;
+    muzzley_plugs_deviceKey_filename=muzzley_plugs_deviceKey_filename + ".key";
+
+    //set the UPNP UDN accordingly with the respective profile id
+    muzzley_lighting_upnp_udn=muzzley_lighting_profileid;
+    muzzley_plugs_upnp_udn=muzzley_plugs_profileid;
+
     //Initialize alljoyn bus ("ClientTest")
     bus = new BusAttachment("MuzzleyConnector", true);
    
@@ -3793,51 +3671,7 @@ int main(int argc, char* argv[]){
     LampManager lampManager(client, lampManagerCBHandler);
     
 
-    ControllerClientStatus status = client.Start();
-    if(status==CONTROLLER_CLIENT_OK){
-        muzzley_controllerclient_connected = true;
-        muzzley_controllerclient_status = ControllerClientStatusText(status);
-        muzzley_controllerclient_version = client.GetVersion();
-        cout << "Lighting Controller Client Start() returned: " << muzzley_controllerclient_status << endl << flush;
-        cout << "Lighting Controller Client Version: " << muzzley_controllerclient_version << endl << flush;
-    }    
-
-    /*
-    //Initialize notification consumer
-    notificationService = NotificationService::getInstance();
-    MyReceiver receiver;
-    bus_status = notificationService->initReceive(bus, &receiver);
-    if (ER_OK != bus_status) {
-        cout << "Error initializing notification receiver: " << QCC_StatusText(bus_status) << endl;
-        cleanup();
-        return 1;
-    }
-    */
-
-    //Register for controlpanel announcements
-    controlPanelService = ControlPanelService::getInstance();
-    QCC_SetDebugLevel(logModules::CONTROLPANEL_MODULE_LOG_NAME, logModules::ALL_LOG_LEVELS);
     
-    controlPanelController = new ControlPanelController();
-    controlPanelListener = new ControlPanelListenerImpl(controlPanelController);
-    bus_status = controlPanelService->initController(bus, controlPanelController, controlPanelListener);
-    if (bus_status != ER_OK) {
-        std::cout << "Could not initialize Controllee." << std::endl;
-        //cleanup();
-        //return 1;
-    }
-
-    //Register for controlpanel notification announcements
-    announceHandler = new AnnounceHandlerImpl(NULL, announceHandlerCallback);
-    AnnouncementRegistrar::RegisterAnnounceHandler(*bus, *announceHandler, NULL, 0);
-    conService = NotificationService::getInstance();
-    controller_receiver = new ControllerNotificationReceiver(controlPanelController);
-    bus_status = conService->initReceive(bus, controller_receiver);
-    if (bus_status != ER_OK) {
-        std::cout << "Could not initialize receiver." << std::endl;
-        //cleanup();
-        //return 1;
-    }
     
     _muzzley_lighting_client.setLoopAssynchronous(MUZZLEY_LOOPASSYNCHRONOUS);
     _muzzley_plugs_client.setLoopAssynchronous(MUZZLEY_LOOPASSYNCHRONOUS);
@@ -3915,19 +3749,71 @@ int main(int argc, char* argv[]){
         // Waits for global manager lighting devicekey
         while(!muzzley_lighting_registered){
             cout << endl << "Waiting for Muzzley lighting registration..." << endl << flush;
-            if(muzzley_lighting_connect_API()==true){
-                muzzley_lighting_registered=muzzley_lighting_connect_manager();
-                sleep(1);
-            }
             
+            muzzley::HTTPRep _rep = muzzley_send_api_http_request(muzzley_api_endpointhost, muzzley_api_port, muzzley_lighting_profileid);
+            if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
+                lighting_thing = muzzley_parse_api_http_reply(_rep);
+                
+                //Read the device key from file
+                muzzley_lighting_deviceKey=muzzley_read_lighting_deviceKey_file();
+                cout << "File lighting device key: " << muzzley_lighting_deviceKey << endl << flush;
+
+                muzzley::HTTPRep _rep = muzzley_send_globalmanager_http_request(muzzley_manager_endpointhost, muzzley_manager_port, muzzley_lighting_profileid, muzzley_lighting_deviceKey, muzzley_lighting_macAddress, muzzley_lighting_upnp_serialnumber, muzzley_lighting_upnp_friendlyname);
+                if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
+                    // Print the value of a message header
+                    muzzley::JSONObj _key = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
+                    cout << endl << "Parsed Global Manager Reply:" << endl << "Lighting deviceKey: " << (string)_key["deviceKey"] << endl << endl << flush;
+                    
+                    //Store deviceKey in a file
+                    muzzley_lighting_deviceKey = (string)_key["deviceKey"];
+                    muzzley_write_lighting_deviceKey_file(muzzley_lighting_deviceKey);
+                    muzzley_lighting_registered=true;
+
+                    //set UPNP filename with the Muzzley profileid
+                    muzzley_lighting_upnp_xml_filename=muzzley_lighting_profileid + ".xml";
+
+                }
+                else{
+                    cout << "Error: " << _rep->status() << endl << flush;
+                }
+                sleep(1);
+            }else{
+                cout << "Error: " << _rep->status() << endl << flush; 
+            }            
         }
 
         // Waits for global manager plugs devicekey
         while(!muzzley_plugs_registered){
             cout << endl << "Waiting for Muzzley plugs registration..." << endl << flush;
-            if(muzzley_plugs_connect_API()==true){
-                muzzley_plugs_registered=muzzley_plugs_connect_manager();
+            muzzley::HTTPRep _rep = muzzley_send_api_http_request(muzzley_api_endpointhost, muzzley_api_port, muzzley_plugs_profileid);
+            if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
+                plugs_thing = muzzley_parse_api_http_reply(_rep);
+
+                //Read the device key from file
+                muzzley_plugs_deviceKey=muzzley_read_plugs_deviceKey_file();
+                cout << "File plugs device key: " << muzzley_plugs_deviceKey << endl << flush;
+
+                muzzley::HTTPRep _rep = muzzley_send_globalmanager_http_request(muzzley_manager_endpointhost, muzzley_manager_port, muzzley_plugs_profileid, muzzley_plugs_deviceKey, muzzley_plugs_macAddress, muzzley_plugs_upnp_serialnumber, muzzley_plugs_upnp_friendlyname);
+                if (_rep->status() == muzzley::HTTP200 || _rep->status() == muzzley::HTTP201) {
+                    // Print the value of a message header
+                    muzzley::JSONObj _key = (muzzley::JSONObj&) muzzley::fromstr(_rep->body());
+                    cout << endl << "Parsed Global Manager Reply:" << endl << "Plugs deviceKey: " << (string)_key["deviceKey"] << endl << endl << flush;
+                    
+                    //Store deviceKey in a file
+                    muzzley_plugs_deviceKey = (string)_key["deviceKey"];
+                    muzzley_write_plugs_deviceKey_file(muzzley_plugs_deviceKey);
+                    muzzley_plugs_registered=true;
+
+                    //set UPNP filename with the Muzzley profileid
+                    muzzley_plugs_upnp_xml_filename=muzzley_plugs_profileid + ".xml";
+
+                }
+                else{
+                    cout << "Error: " << _rep->status() << endl << flush;
+                }
                 sleep(1);
+            }else{
+                cout << "Error: " << _rep->status() << endl << flush; 
             }
         }
 
@@ -3938,6 +3824,53 @@ int main(int argc, char* argv[]){
         //Connects the application to the Muzzley server.
         _muzzley_plugs_client.initApp(muzzley_plugs_apptoken);
         cout << "Muzzley plugs started!" << endl << flush;
+
+
+        ControllerClientStatus status = client.Start();
+        if(status==CONTROLLER_CLIENT_OK){
+            muzzley_controllerclient_connected = true;
+            muzzley_controllerclient_status = ControllerClientStatusText(status);
+            muzzley_controllerclient_version = client.GetVersion();
+            cout << "Lighting Controller Client Start() returned: " << muzzley_controllerclient_status << endl << flush;
+            cout << "Lighting Controller Client Version: " << muzzley_controllerclient_version << endl << flush;
+        }    
+
+        /*
+        //Initialize notification consumer
+        notificationService = NotificationService::getInstance();
+        MyReceiver receiver;
+        bus_status = notificationService->initReceive(bus, &receiver);
+        if (ER_OK != bus_status) {
+            cout << "Error initializing notification receiver: " << QCC_StatusText(bus_status) << endl;
+            cleanup();
+            return 1;
+        }
+        */
+
+        //Register for controlpanel announcements
+        controlPanelService = ControlPanelService::getInstance();
+        QCC_SetDebugLevel(logModules::CONTROLPANEL_MODULE_LOG_NAME, logModules::ALL_LOG_LEVELS);
+        
+        controlPanelController = new ControlPanelController();
+        controlPanelListener = new ControlPanelListenerImpl(controlPanelController);
+        bus_status = controlPanelService->initController(bus, controlPanelController, controlPanelListener);
+        if (bus_status != ER_OK) {
+            std::cout << "Could not initialize Controllee." << std::endl;
+            //cleanup();
+            //return 1;
+        }
+
+        //Register for controlpanel notification announcements
+        announceHandler = new AnnounceHandlerImpl(NULL, announceHandlerCallback);
+        AnnouncementRegistrar::RegisterAnnounceHandler(*bus, *announceHandler, NULL, 0);
+        conService = NotificationService::getInstance();
+        controller_receiver = new ControllerNotificationReceiver(controlPanelController);
+        bus_status = conService->initReceive(bus, controller_receiver);
+        if (bus_status != ER_OK) {
+            std::cout << "Could not initialize receiver." << std::endl;
+            //cleanup();
+            //return 1;
+        }
 
         //Starts the UPNP advertisement
         std::thread upnp_thread(upnp_advertise);
