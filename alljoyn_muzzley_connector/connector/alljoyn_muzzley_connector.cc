@@ -1273,6 +1273,7 @@ bool muzzley_replace_lighting_components(){
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        cout << _rep->body() << endl << endl << flush;
         return false;
     }
     return true;
@@ -1323,6 +1324,7 @@ bool muzzley_add_lighting_component(LSFString lampID, LSFString lampName){
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        cout << _rep->body() << endl << endl << flush;
         return false;
     }
    
@@ -1378,6 +1380,7 @@ bool muzzley_add_lighting_components(LSFStringList new_lampIDs){
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        cout << _rep->body() << endl << endl << flush;
     }
     
     return true;
@@ -1430,6 +1433,7 @@ bool muzzley_remove_lighting_components(LSFStringList del_lampIDs){
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        cout << _rep->body() << endl << endl << flush;
         return false;
     }
     
@@ -1533,6 +1537,7 @@ bool muzzley_replace_plugs_components(){
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        cout << _rep->body() << endl << endl << flush;
         return false;
     }
     return true;
@@ -1583,6 +1588,7 @@ bool muzzley_add_plugs_component(string plug_id, string plug_name){
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        cout << _rep->body() << endl << endl << flush;
         return false;
     }
 
@@ -1635,6 +1641,7 @@ bool muzzley_add_plugs_components(string plug_id, string plug_name){
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        cout << _rep->body() << endl << endl << flush;
         return false;
     }
 
@@ -1687,6 +1694,7 @@ bool muzzley_remove_plugs_component(string plug_id, string plug_name){
     if (_rep->status() == muzzley::HTTP200) {}
     else{
         cout << "Error: " << _rep->status() << endl << flush;
+        cout << _rep->body() << endl << endl << flush;
         return false;
     }
     return true;
@@ -3775,10 +3783,12 @@ int main(int argc, char* argv[]){
                 }
                 else{
                     cout << "Error: " << _rep->status() << endl << flush;
+                    cout << _rep->body() << endl << endl << flush;
                 }
                 sleep(1);
             }else{
                 cout << "Error: " << _rep->status() << endl << flush; 
+                cout << _rep->body() << endl << endl << flush;
             }            
         }
 
@@ -3810,10 +3820,12 @@ int main(int argc, char* argv[]){
                 }
                 else{
                     cout << "Error: " << _rep->status() << endl << flush;
+                    cout << _rep->body() << endl << endl << flush;
                 }
                 sleep(1);
             }else{
-                cout << "Error: " << _rep->status() << endl << flush; 
+                cout << "Error: " << _rep->status() << endl << flush;
+                cout << _rep->body() << endl << endl << flush;
             }
         }
 
