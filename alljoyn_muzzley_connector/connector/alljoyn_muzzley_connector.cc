@@ -3538,14 +3538,6 @@ int main(int argc, char* argv[]){
 
     muzzley_OnBehalfOf = true;
 
-    //Get MACAdress info from the current network interface in use
-    muzzley_lighting_macAddress = get_iface_macAdress(muzzley_lighting_upnp_interface);
-       muzzley_plugs_macAddress = get_iface_macAdress(muzzley_plugs_upnp_interface);
-
-    //Calc the serial number from the macAddress;
-    muzzley_lighting_upnp_serialnumber = sha256(muzzley_lighting_macAddress);
-    muzzley_plugs_upnp_serialnumber = sha256(muzzley_plugs_macAddress);
-
     //Parse cmd line custom Muzzley tokens
     if(argc>1){
         for (int i = 1; i < argc; i++) {
@@ -3590,7 +3582,7 @@ int main(int argc, char* argv[]){
             } else if (strcmp(argv[i], "--plugs-udn")==0) {
                 muzzley_plugs_upnp_udn = argv[i + 1];
             } else if (strcmp(argv[i], "--plugs-interface")==0) {
-                muzzley_lighting_upnp_interface = argv[i + 1];
+                muzzley_plugs_upnp_interface = argv[i + 1];
             } else if (strcmp(argv[i], "--plugs-port")==0) {
                 muzzley_plugs_upnp_port = atoi(argv[i + 1]);
             //} else if (strcmp(argv[i], "--plugs-xml-filename")==0) {
@@ -3631,6 +3623,14 @@ int main(int argc, char* argv[]){
         }
     }
     
+    //get MACAdress info from the current network interface in use
+    muzzley_lighting_macAddress = get_iface_macAdress(muzzley_lighting_upnp_interface);
+       muzzley_plugs_macAddress = get_iface_macAdress(muzzley_plugs_upnp_interface);
+
+    //calc the serial number from the macAddress;
+    muzzley_lighting_upnp_serialnumber = sha256(muzzley_lighting_macAddress);
+    muzzley_plugs_upnp_serialnumber = sha256(muzzley_plugs_macAddress);
+
     //set the semaphore filename
     muzzley_semaphore_filename=muzzley_lighting_profileid+muzzley_plugs_profileid + ".sem";
     muzzley_write_semaphore_file();
@@ -3645,7 +3645,7 @@ int main(int argc, char* argv[]){
     muzzley_lighting_upnp_udn=muzzley_lighting_profileid;
     muzzley_plugs_upnp_udn=muzzley_plugs_profileid;
 
-    //Initialize alljoyn bus ("ClientTest")
+    //initialize alljoyn bus ("ClientTest")
     bus = new BusAttachment("MuzzleyConnector", true);
    
     QStatus bus_status = bus->Start();
