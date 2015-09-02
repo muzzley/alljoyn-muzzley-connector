@@ -13,8 +13,14 @@ env['BUILD_SERVICES_SAMPLES'] = 'off'
 
 # Link Muzzley Library
 env.Append(CPPFLAGS=[ '-O2', '-g', '-std=c++0x', '-fexceptions', '-fpermissive', '-Wno-error']);
-env.Append(LIBS=['pthread', 'alljoyn_about', 'libxml2', 'libgupnp-1.0', 'libglib-2.0', 'libgssdp-1.0', 'muzzley', 'ssl', 'crypto']);
+env.Append(LIBS=['pthread', 'alljoyn_about', 'libglib-2.0', 'libxml2', 'libgupnp-1.0', 'libgssdp-1.0', 'muzzley', 'ssl', 'crypto']);
+env.Append(CPPPATH = '/usr/include/glib-2.0');
+env.Append(CPPPATH = '/usr/lib/glib-2.0/include');
+env.Append(CPPPATH = '/usr/include/libsoup-2.4');
 env.Append(CPPPATH = '/usr/include/libxml2');
+env.Append(CPPPATH = '/usr/include/gupnp-1.0');
+env.Append(CPPPATH = '/usr/include/gssdp-1.0');
+
 
 
 # Add all services include path
@@ -23,6 +29,7 @@ env.Append(CPPPATH = '$DISTDIR/config/inc');
 env.Append(CPPPATH = '$DISTDIR/services_common/inc');
 env.Append(CPPPATH = '$DISTDIR/notification/inc');
 env.Append(CPPPATH = '$DISTDIR/controlpanel/inc');
+
 
 
 # Build all the services

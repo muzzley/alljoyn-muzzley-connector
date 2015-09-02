@@ -32,9 +32,7 @@
 //GUPnP
 #include <libgupnp/gupnp.h>
 #include <libgssdp/gssdp.h>
-#include <gio/gio.h>
-#include <stdlib.h>
-#include <gmodule.h>
+
 
 //Muzzley
 #include <signal.h>
