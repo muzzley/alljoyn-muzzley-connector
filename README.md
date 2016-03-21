@@ -1,6 +1,6 @@
 # Info
 
-**This project has been deprecated in favor of the newer [The AllJoyn / Muzzley Gateway Connector](https://github.com/muzzley/alljoyn-muzzley-gateway-connector).**
+**This project has been deprecated in favor of the newer [AllJoyn / Muzzley Gateway Connector](https://github.com/muzzley/alljoyn-muzzley-gateway-connector).**
 
 # AllJoyn Muzzley Connector #
 
