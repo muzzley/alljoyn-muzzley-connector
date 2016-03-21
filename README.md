@@ -1,3 +1,7 @@
+# Info
+
+**This project has been deprecated in favor of the newer [The AllJoyn / Muzzley Gateway Connector](https://github.com/muzzley/alljoyn-muzzley-gateway-connector).**
+
 # AllJoyn Muzzley Connector #
 
 This repo contains the code for the AllJoyn-Muzzley connector C++ client library.
